@@ -197,6 +197,12 @@ tr:hover td { background: #f8fafc; }
 .badge-inactive { background: #f1f5f9; color: var(--text-secondary); }
 .badge-hombli { background: var(--accent-light); color: var(--accent); }
 .badge-sinji { background: var(--info-light); color: var(--info); }
+.badge-promo { background: #fef3c7; color: #d97706; font-size: 10px; padding: 1px 7px; margin-left: 6px; }
+
+/* Promo price display */
+.price-promo { display: flex; flex-direction: column; gap: 1px; }
+.price-promo .actual-price { font-weight: 700; color: var(--success); }
+.price-promo .base-price { font-size: 11px; color: var(--text-secondary); text-decoration: line-through; }
 
 /* Price change indicators */
 .price-up { color: var(--danger); font-weight: 600; }
@@ -548,7 +554,17 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
                   </td>
                   <td>{p.ean}</td>
                   <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
-                  <td style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</td>
+                  <td>
+                    {p.isPromo === 'yes' && p.basePrice > 0 ? (
+                      <div className="price-promo">
+                        <span className="actual-price">{formatCurrency(p.currentPrice)}</span>
+                        <span className="base-price">{formatCurrency(p.basePrice)}</span>
+                      </div>
+                    ) : (
+                      <span style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</span>
+                    )}
+                    {p.isPromo === 'yes' && <span className="badge badge-promo">PROMO</span>}
+                  </td>
                   <td>{p.currentStock}</td>
                   <td>{p.fulfilmentType}</td>
                   <td>
@@ -670,11 +686,46 @@ function ChangesPage({ changes, accountFilter, search, onProductClick, products 
 // PROMOTIONS PAGE
 // ═══════════════════════════════════════════════════════════════
 
-function PromotionsPage({ promotions, accountFilter, search }) {
+function PromotionsPage({ promotions, accountFilter, search, products }) {
   const [statusFilter, setStatusFilter] = useState('active');
 
+  // Merge API promotions with auto-detected promos from products
+  const allPromos = useMemo(() => {
+    // Start with API promotions
+    const promoMap = {};
+    promotions.forEach(p => {
+      promoMap[p.ean + '|' + p.account] = p;
+    });
+
+    // Add auto-detected promos from products (where isPromo=yes but not in API promos)
+    if (products) {
+      products.forEach(p => {
+        if (p.isPromo === 'yes' && p.basePrice > 0 && p.currentPrice > 0) {
+          const key = p.ean + '|' + p.account;
+          if (!promoMap[key]) {
+            const discount = ((1 - p.currentPrice / p.basePrice) * 100).toFixed(1);
+            promoMap[key] = {
+              promotionId: 'auto-' + p.ean,
+              ean: p.ean,
+              account: p.account,
+              productName: p.productName,
+              regularPrice: p.basePrice,
+              promoPrice: p.currentPrice,
+              discount: discount + '%',
+              startDate: '',
+              endDate: '',
+              status: 'active'
+            };
+          }
+        }
+      });
+    }
+
+    return Object.values(promoMap);
+  }, [promotions, products]);
+
   const filtered = useMemo(() => {
-    let list = promotions;
+    let list = allPromos;
     if (accountFilter !== 'all') {
       list = list.filter(p => p.account === accountFilter);
     }
@@ -688,14 +739,17 @@ function PromotionsPage({ promotions, accountFilter, search }) {
     if (statusFilter !== 'all') {
       list = list.filter(p => p.status === statusFilter);
     }
-    // Sort by end date (soonest first)
+    // Sort by discount (largest first), then by name
     list = [...list].sort((a, b) => {
+      const da = parseFloat(a.discount) || 0;
+      const db = parseFloat(b.discount) || 0;
+      if (da !== db) return db - da;
       if (!a.endDate) return 1;
       if (!b.endDate) return -1;
       return new Date(a.endDate) - new Date(b.endDate);
     });
     return list;
-  }, [promotions, accountFilter, search, statusFilter]);
+  }, [allPromos, accountFilter, search, statusFilter]);
 
   return (
     <>
@@ -873,9 +927,20 @@ function ProductDetailModal({ product, changes, onClose }) {
           {/* Stats */}
           <div className="modal-stats">
             <div className="modal-stat">
-              <div className="modal-stat-label">Current Price</div>
-              <div className="modal-stat-value">{formatCurrency(product.currentPrice)}</div>
+              <div className="modal-stat-label">Selling Price</div>
+              <div className="modal-stat-value" style={product.isPromo === 'yes' ? {color: 'var(--success)'} : {}}>
+                {formatCurrency(product.currentPrice)}
+                {product.isPromo === 'yes' && <span className="badge badge-promo" style={{marginLeft: 8, verticalAlign: 'middle'}}>PROMO</span>}
+              </div>
             </div>
+            {product.basePrice > 0 && product.basePrice !== product.currentPrice && (
+              <div className="modal-stat">
+                <div className="modal-stat-label">Base Price</div>
+                <div className="modal-stat-value" style={{textDecoration: product.isPromo === 'yes' ? 'line-through' : 'none', color: 'var(--text-secondary)'}}>
+                  {formatCurrency(product.basePrice)}
+                </div>
+              </div>
+            )}
             <div className="modal-stat">
               <div className="modal-stat-label">Previous Price</div>
               <div className="modal-stat-value">{product.previousPrice ? formatCurrency(product.previousPrice) : '—'}</div>
@@ -1007,7 +1072,9 @@ function App() {
       'EAN': p.ean,
       'Account': p.account,
       'Product Name': p.productName,
-      'Current Price': p.currentPrice,
+      'Selling Price': p.currentPrice,
+      'Base Price': p.basePrice || '',
+      'On Promo': p.isPromo || 'no',
       'Previous Price': p.previousPrice || '',
       'Price Change Date': p.priceChangeDate,
       'Stock': p.currentStock,
@@ -1058,7 +1125,7 @@ function App() {
     }).length : 0
   };
 
-  const activePromos = data.promotions ? data.promotions.filter(p => p.status === 'active').length : 0;
+  const activePromos = data.totalPromos || (data.products ? data.products.filter(p => p.isPromo === 'yes').length : 0);
 
   return (
     <>
@@ -1156,6 +1223,7 @@ function App() {
           promotions={data.promotions}
           accountFilter={accountFilter}
           search={search}
+          products={data.products}
         />
       )}
 
