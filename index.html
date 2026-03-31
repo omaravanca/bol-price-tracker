@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bol.com Price Tracker — Hombli & Sinji</title>
+
+<!-- React 18 -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<!-- Babel standalone for JSX -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<style>
+/* ── Variables ── */
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-secondary: #64748b;
+  --accent: #0061af;
+  --accent-hover: #004d8c;
+  --accent-light: #e0f0ff;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --info: #6366f1;
+  --info-light: #e0e7ff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Login Screen ── */
+.login-overlay {
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, #0061af 0%, #003d6e 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.login-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 48px 40px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+.login-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.login-card p { color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+.login-card .logo-text { font-size: 13px; color: var(--accent); font-weight: 600; letter-spacing: 1px; margin-bottom: 16px; }
+.login-field { margin-bottom: 16px; text-align: left; }
+.login-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary); }
+.login-field input {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+.login-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,97,175,0.1); }
+.login-btn {
+  width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius);
+  font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.2s;
+}
+.login-btn:hover { background: var(--accent-hover); }
+.login-error { color: var(--danger); font-size: 13px; margin-top: 12px; }
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-title { font-size: 18px; font-weight: 700; }
+.header-subtitle { font-size: 12px; color: var(--text-secondary); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.last-run { font-size: 12px; color: var(--text-secondary); }
+
+/* ── Navigation ── */
+.nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 0;
+}
+.nav-tab {
+  padding: 12px 20px;
+  font-size: 14px; font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.nav-tab .tab-count {
+  background: var(--bg); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px;
+}
+
+/* ── Filter Bar ── */
+.filter-bar {
+  padding: 16px 24px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.search-input {
+  padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; width: 280px; outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.filter-chip {
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-secondary); transition: all 0.2s;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+.filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.filter-spacer { flex: 1; }
+.export-btn {
+  padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); transition: all 0.2s;
+}
+.export-btn:hover { background: var(--bg); }
+
+/* ── Stats Bar ── */
+.stats-bar {
+  padding: 0 24px 16px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 20px; min-width: 160px; flex: 1;
+}
+.stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 4px; }
+.stat-value { font-size: 24px; font-weight: 700; }
+.stat-value.accent { color: var(--accent); }
+.stat-value.success { color: var(--success); }
+.stat-value.warning { color: var(--warning); }
+
+/* ── Table ── */
+.table-container {
+  padding: 0 24px 24px;
+  overflow-x: auto;
+}
+table {
+  width: 100%; border-collapse: collapse;
+  background: var(--surface); border-radius: var(--radius-lg);
+  overflow: hidden; box-shadow: var(--shadow);
+}
+th {
+  text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600;
+  color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+th:hover { color: var(--text); }
+th .sort-arrow { margin-left: 4px; font-size: 10px; }
+td {
+  padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+.clickable-row { cursor: pointer; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block; padding: 2px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.badge-active { background: var(--success-light); color: var(--success); }
+.badge-out_of_stock { background: var(--warning-light); color: var(--warning); }
+.badge-inactive { background: #f1f5f9; color: var(--text-secondary); }
+.badge-hombli { background: var(--accent-light); color: var(--accent); }
+.badge-sinji { background: var(--info-light); color: var(--info); }
+
+/* Price change indicators */
+.price-up { color: var(--danger); font-weight: 600; }
+.price-down { color: var(--success); font-weight: 600; }
+.price-same { color: var(--text-secondary); }
+
+/* ── Change Cards ── */
+.changes-grid {
+  padding: 0 24px 24px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px;
+}
+.change-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; transition: box-shadow 0.2s; cursor: pointer;
+}
+.change-card:hover { box-shadow: var(--shadow-lg); }
+.change-card.increase { border-left: 4px solid var(--danger); }
+.change-card.decrease { border-left: 4px solid var(--success); }
+.change-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.change-card-product { font-weight: 600; font-size: 14px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.change-card-time { font-size: 11px; color: var(--text-secondary); }
+.change-card-prices { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.change-card-old { color: var(--text-secondary); text-decoration: line-through; font-size: 14px; }
+.change-card-arrow { font-size: 16px; }
+.change-card-new { font-weight: 700; font-size: 16px; }
+.change-card-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+
+/* ── Promotions ── */
+.promo-list {
+  padding: 0 24px 24px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.promo-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.promo-card.ending-soon { border-left: 4px solid var(--warning); }
+.promo-card.ended { opacity: 0.6; }
+.promo-info { flex: 1; min-width: 0; }
+.promo-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.promo-ean { font-size: 12px; color: var(--text-secondary); }
+.promo-prices { text-align: right; }
+.promo-regular { font-size: 13px; color: var(--text-secondary); text-decoration: line-through; }
+.promo-discounted { font-size: 18px; font-weight: 700; color: var(--success); }
+.promo-discount { font-size: 12px; color: var(--success); font-weight: 600; }
+.promo-dates { text-align: right; min-width: 120px; }
+.promo-end { font-size: 13px; font-weight: 600; }
+.promo-remaining { font-size: 12px; }
+.promo-remaining.urgent { color: var(--danger); font-weight: 600; }
+.promo-remaining.soon { color: var(--warning); font-weight: 600; }
+
+/* ── Product Detail Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg);
+  width: 800px; max-width: 100%; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.modal-close {
+  background: none; border: none; font-size: 24px; cursor: pointer;
+  color: var(--text-secondary); padding: 0 4px;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 24px; }
+.modal-section { margin-bottom: 24px; }
+.modal-section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.modal-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;
+  margin-bottom: 24px;
+}
+.modal-stat { background: var(--bg); border-radius: var(--radius); padding: 12px; }
+.modal-stat-label { font-size: 11px; color: var(--text-secondary); }
+.modal-stat-value { font-size: 18px; font-weight: 700; }
+.chart-container { height: 300px; position: relative; }
+
+/* ── Date filter ── */
+.date-filter {
+  display: flex; gap: 8px; padding: 0 24px 12px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center; padding: 60px 24px;
+  color: var(--text-secondary);
+}
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty-state p { font-size: 14px; }
+
+/* ── Loading ── */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 80px 24px; color: var(--text-secondary); font-size: 15px;
+}
+.spinner {
+  width: 24px; height: 24px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin-right: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Pagination ── */
+.pagination {
+  display: flex; justify-content: center; align-items: center; gap: 8px;
+  padding: 16px 24px;
+}
+.page-btn {
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); cursor: pointer; font-size: 13px;
+}
+.page-btn:hover { background: var(--bg); }
+.page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-info { font-size: 13px; color: var(--text-secondary); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .header { padding: 0 16px; }
+  .filter-bar { padding: 12px 16px; }
+  .search-input { width: 100%; }
+  .stats-bar { padding: 0 16px 12px; }
+  .stat-card { min-width: 140px; }
+  .table-container { padding: 0 16px 16px; }
+  .changes-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }
+  .modal { margin: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+// ═══════════════════════════════════════════════════════════════
+// CONFIG — Update the APPS_SCRIPT_URL after deploying Apps Script
+// ═══════════════════════════════════════════════════════════════
+const CONFIG = {
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw15hc066YhwhhQ-iMb6DP7WEcihbDt8sc0DL8anB_cEuFfhCoREV-9JQRuaXOP9ssX/exec',
+  PAGE_SIZE: 50,
+};
+
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════
+
+function formatCurrency(val) {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return '\u20AC' + Number(val).toFixed(2);
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return '—';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch { return isoStr; }
+}
+
+function formatDateTime(isoStr) {
+  if (!isoStr) return '—';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  } catch { return isoStr; }
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const end = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  return days + 'd ago';
+}
+
+async function apiCall(action, params = {}) {
+  const password = sessionStorage.getItem('bpt_password') || '';
+  const queryParams = new URLSearchParams({ action, password, ...params });
+  const url = CONFIG.APPS_SCRIPT_URL + '?' + queryParams.toString();
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return resp.json();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PASSWORD SCREEN
+// ═══════════════════════════════════════════════════════════════
+
+function PasswordScreen({ onLogin }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!password.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      sessionStorage.setItem('bpt_password', password);
+      const data = await apiCall('getData');
+      if (data.success) {
+        onLogin(data);
+      } else {
+        setError(data.error || 'Invalid password');
+        sessionStorage.removeItem('bpt_password');
+      }
+    } catch (err) {
+      setError('Connection failed. Check the Apps Script URL.');
+      sessionStorage.removeItem('bpt_password');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="login-overlay">
+      <form className="login-card" onSubmit={handleSubmit}>
+        <div className="logo-text">AVANCA INTERNATIONAL</div>
+        <h1>Bol.com Price Tracker</h1>
+        <p>Track prices across Hombli & Sinji accounts</p>
+        <div className="login-field">
+          <label>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Enter password"
+            autoFocus
+          />
+        </div>
+        <button type="submit" className="login-btn" disabled={loading}>
+          {loading ? 'Connecting...' : 'Sign In'}
+        </button>
+        {error && <div className="login-error">{error}</div>}
+      </form>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OVERVIEW PAGE
+// ═══════════════════════════════════════════════════════════════
+
+function OverviewPage({ products, accountFilter, search, onProductClick }) {
+  const [sortCol, setSortCol] = useState('productName');
+  const [sortDir, setSortDir] = useState('asc');
+  const [page, setPage] = useState(1);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [accountFilter, search]);
+
+  const filtered = useMemo(() => {
+    let list = products;
+    if (accountFilter !== 'all') {
+      list = list.filter(p => p.account === accountFilter);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(p =>
+        (p.productName || '').toLowerCase().includes(q) ||
+        (p.ean || '').includes(q)
+      );
+    }
+    // Sort
+    list = [...list].sort((a, b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [products, accountFilter, search, sortCol, sortDir]);
+
+  const totalPages = Math.ceil(filtered.length / CONFIG.PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * CONFIG.PAGE_SIZE, page * CONFIG.PAGE_SIZE);
+
+  const handleSort = (col) => {
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+  };
+
+  const sortArrow = (col) => {
+    if (sortCol !== col) return '';
+    return sortDir === 'asc' ? ' \u25B2' : ' \u25BC';
+  };
+
+  const getPriceChangeIndicator = (product) => {
+    if (product.previousPrice === null || product.previousPrice === undefined) return null;
+    const diff = product.currentPrice - product.previousPrice;
+    if (Math.abs(diff) < 0.01) return null;
+    if (diff > 0) return { cls: 'price-up', arrow: '\u2191', text: '+' + formatCurrency(diff) };
+    return { cls: 'price-down', arrow: '\u2193', text: formatCurrency(diff) };
+  };
+
+  return (
+    <>
+      <div className="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th onClick={() => handleSort('productName')}>Product{sortArrow('productName')}</th>
+              <th onClick={() => handleSort('ean')}>EAN{sortArrow('ean')}</th>
+              <th onClick={() => handleSort('account')}>Account{sortArrow('account')}</th>
+              <th onClick={() => handleSort('currentPrice')}>Price{sortArrow('currentPrice')}</th>
+              <th onClick={() => handleSort('currentStock')}>Stock{sortArrow('currentStock')}</th>
+              <th onClick={() => handleSort('fulfilmentType')}>Fulfilment{sortArrow('fulfilmentType')}</th>
+              <th>Change</th>
+              <th onClick={() => handleSort('status')}>Status{sortArrow('status')}</th>
+              <th onClick={() => handleSort('lastChecked')}>Last Checked{sortArrow('lastChecked')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paged.map((p, i) => {
+              const indicator = getPriceChangeIndicator(p);
+              return (
+                <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                  <td style={{maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                    {p.productName || '—'}
+                  </td>
+                  <td>{p.ean}</td>
+                  <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                  <td style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</td>
+                  <td>{p.currentStock}</td>
+                  <td>{p.fulfilmentType}</td>
+                  <td>
+                    {indicator ? (
+                      <span className={indicator.cls}>
+                        {indicator.arrow} {indicator.text}
+                      </span>
+                    ) : (
+                      <span className="price-same">—</span>
+                    )}
+                  </td>
+                  <td><span className={'badge badge-' + p.status}>{p.status.replace('_', ' ')}</span></td>
+                  <td title={p.lastChecked}>{timeAgo(p.lastChecked) || formatDate(p.lastChecked)}</td>
+                </tr>
+              );
+            })}
+            {paged.length === 0 && (
+              <tr><td colSpan="9" style={{textAlign: 'center', padding: '40px', color: 'var(--text-secondary)'}}>
+                No products found
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+          <span className="page-info">Page {page} of {totalPages} ({filtered.length} products)</span>
+          <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRICE CHANGES PAGE
+// ═══════════════════════════════════════════════════════════════
+
+function ChangesPage({ changes, accountFilter, search, onProductClick, products }) {
+  const [dateFilter, setDateFilter] = useState('30');
+
+  const filtered = useMemo(() => {
+    let list = changes;
+    if (accountFilter !== 'all') {
+      list = list.filter(c => c.account === accountFilter);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(c =>
+        (c.productName || '').toLowerCase().includes(q) ||
+        (c.ean || '').includes(q)
+      );
+    }
+    if (dateFilter !== 'all') {
+      const days = parseInt(dateFilter);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      list = list.filter(c => new Date(c.timestamp) >= cutoff);
+    }
+    return list;
+  }, [changes, accountFilter, search, dateFilter]);
+
+  const findProduct = (ean, account) =>
+    products.find(p => p.ean === ean && p.account === account);
+
+  return (
+    <>
+      <div className="date-filter">
+        {[{v:'7', l:'Last 7 days'}, {v:'30', l:'Last 30 days'}, {v:'90', l:'Last 90 days'}, {v:'all', l:'All time'}].map(f => (
+          <button
+            key={f.v}
+            className={'filter-chip' + (dateFilter === f.v ? ' active' : '')}
+            onClick={() => setDateFilter(f.v)}
+          >{f.l}</button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <div className="empty-state">
+          <h3>No price changes</h3>
+          <p>No price changes detected in the selected period.</p>
+        </div>
+      ) : (
+        <div className="changes-grid">
+          {filtered.map((c, i) => (
+            <div
+              key={i}
+              className={'change-card ' + c.direction}
+              onClick={() => {
+                const prod = findProduct(c.ean, c.account);
+                if (prod) onProductClick(prod);
+              }}
+            >
+              <div className="change-card-header">
+                <div className="change-card-product" title={c.productName}>{c.productName || c.ean}</div>
+                <div className="change-card-time">{timeAgo(c.timestamp)}</div>
+              </div>
+              <div className="change-card-prices">
+                <span className="change-card-old">{formatCurrency(c.oldPrice)}</span>
+                <span className="change-card-arrow">{c.direction === 'increase' ? '\u2192' : '\u2192'}</span>
+                <span className={'change-card-new ' + (c.direction === 'increase' ? 'price-up' : 'price-down')}>
+                  {formatCurrency(c.newPrice)}
+                </span>
+              </div>
+              <div className="change-card-meta">
+                <span className={'badge badge-' + c.account}>{c.account}</span>
+                <span>{c.changePct}</span>
+                <span>{formatDateTime(c.timestamp)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROMOTIONS PAGE
+// ═══════════════════════════════════════════════════════════════
+
+function PromotionsPage({ promotions, accountFilter, search }) {
+  const [statusFilter, setStatusFilter] = useState('active');
+
+  const filtered = useMemo(() => {
+    let list = promotions;
+    if (accountFilter !== 'all') {
+      list = list.filter(p => p.account === accountFilter);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(p =>
+        (p.productName || '').toLowerCase().includes(q) ||
+        (p.ean || '').includes(q)
+      );
+    }
+    if (statusFilter !== 'all') {
+      list = list.filter(p => p.status === statusFilter);
+    }
+    // Sort by end date (soonest first)
+    list = [...list].sort((a, b) => {
+      if (!a.endDate) return 1;
+      if (!b.endDate) return -1;
+      return new Date(a.endDate) - new Date(b.endDate);
+    });
+    return list;
+  }, [promotions, accountFilter, search, statusFilter]);
+
+  return (
+    <>
+      <div className="date-filter">
+        {[{v:'active', l:'Active'}, {v:'upcoming', l:'Upcoming'}, {v:'ended', l:'Ended'}, {v:'all', l:'All'}].map(f => (
+          <button
+            key={f.v}
+            className={'filter-chip' + (statusFilter === f.v ? ' active' : '')}
+            onClick={() => setStatusFilter(f.v)}
+          >{f.l}</button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <div className="empty-state">
+          <h3>No promotions</h3>
+          <p>No promotions found for the selected filter.</p>
+        </div>
+      ) : (
+        <div className="promo-list">
+          {filtered.map((p, i) => {
+            const remaining = daysUntil(p.endDate);
+            const isEndingSoon = remaining !== null && remaining >= 0 && remaining <= 3;
+            return (
+              <div key={i} className={'promo-card' + (isEndingSoon ? ' ending-soon' : '') + (p.status === 'ended' ? ' ended' : '')}>
+                <div className="promo-info">
+                  <div className="promo-name" title={p.productName}>{p.productName || p.ean}</div>
+                  <div className="promo-ean">
+                    <span className={'badge badge-' + p.account}>{p.account}</span>
+                    {' '} EAN: {p.ean}
+                  </div>
+                </div>
+                <div className="promo-prices">
+                  {p.regularPrice > 0 && <div className="promo-regular">{formatCurrency(p.regularPrice)}</div>}
+                  <div className="promo-discounted">{formatCurrency(p.promoPrice)}</div>
+                  {p.discount && <div className="promo-discount">-{p.discount}</div>}
+                </div>
+                <div className="promo-dates">
+                  <div className="promo-end">
+                    {p.endDate ? 'Ends: ' + formatDate(p.endDate) : 'No end date'}
+                  </div>
+                  <div className={'promo-remaining' + (remaining !== null && remaining <= 1 ? ' urgent' : '') + (isEndingSoon ? ' soon' : '')}>
+                    {remaining !== null ? (
+                      remaining < 0 ? 'Ended' :
+                      remaining === 0 ? 'Ends today' :
+                      remaining === 1 ? '1 day left' :
+                      remaining + ' days left'
+                    ) : ''}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRODUCT DETAIL MODAL
+// ═══════════════════════════════════════════════════════════════
+
+function ProductDetailModal({ product, changes, onClose }) {
+  const [history, setHistory] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState('90');
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiCall('getHistory', { ean: product.ean, account: product.account })
+      .then(data => {
+        if (!cancelled && data.success) setHistory(data.history);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+    return () => { cancelled = true; };
+  }, [product.ean, product.account]);
+
+  // Chart rendering
+  useEffect(() => {
+    if (!history || !chartRef.current) return;
+
+    // Filter by time range
+    let data = history;
+    if (timeRange !== 'all') {
+      const days = parseInt(timeRange);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      data = data.filter(h => new Date(h.timestamp) >= cutoff);
+    }
+
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+    }
+
+    const ctx = chartRef.current.getContext('2d');
+    chartInstance.current = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map(h => {
+          const d = new Date(h.timestamp);
+          return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
+        }),
+        datasets: [{
+          label: 'Price (\u20AC)',
+          data: data.map(h => h.price),
+          borderColor: '#0061af',
+          backgroundColor: 'rgba(0,97,175,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: data.length > 60 ? 0 : 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => '\u20AC' + ctx.parsed.y.toFixed(2)
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: false,
+            ticks: {
+              callback: (v) => '\u20AC' + v.toFixed(2)
+            }
+          }
+        }
+      }
+    });
+
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+        chartInstance.current = null;
+      }
+    };
+  }, [history, timeRange]);
+
+  // Product-specific changes
+  const productChanges = useMemo(() => {
+    return changes.filter(c => c.ean === product.ean && c.account === product.account);
+  }, [changes, product]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <div className="modal-header">
+          <div>
+            <div className="modal-title">{product.productName || 'Product'}</div>
+            <div className="modal-subtitle">
+              EAN: {product.ean} | <span className={'badge badge-' + product.account}>{product.account}</span>
+            </div>
+          </div>
+          <button className="modal-close" onClick={onClose}>&times;</button>
+        </div>
+        <div className="modal-body">
+          {/* Stats */}
+          <div className="modal-stats">
+            <div className="modal-stat">
+              <div className="modal-stat-label">Current Price</div>
+              <div className="modal-stat-value">{formatCurrency(product.currentPrice)}</div>
+            </div>
+            <div className="modal-stat">
+              <div className="modal-stat-label">Previous Price</div>
+              <div className="modal-stat-value">{product.previousPrice ? formatCurrency(product.previousPrice) : '—'}</div>
+            </div>
+            <div className="modal-stat">
+              <div className="modal-stat-label">Stock</div>
+              <div className="modal-stat-value">{product.currentStock}</div>
+            </div>
+            <div className="modal-stat">
+              <div className="modal-stat-label">Fulfilment</div>
+              <div className="modal-stat-value">{product.fulfilmentType}</div>
+            </div>
+            <div className="modal-stat">
+              <div className="modal-stat-label">Status</div>
+              <div className="modal-stat-value"><span className={'badge badge-' + product.status}>{product.status.replace('_', ' ')}</span></div>
+            </div>
+          </div>
+
+          {/* Price Chart */}
+          <div className="modal-section">
+            <div className="modal-section-title">Price History</div>
+            <div style={{display: 'flex', gap: '8px', marginBottom: '12px'}}>
+              {[{v:'30', l:'30 days'}, {v:'90', l:'90 days'}, {v:'365', l:'1 year'}, {v:'all', l:'All'}].map(f => (
+                <button
+                  key={f.v}
+                  className={'filter-chip' + (timeRange === f.v ? ' active' : '')}
+                  onClick={() => setTimeRange(f.v)}
+                >{f.l}</button>
+              ))}
+            </div>
+            {loading ? (
+              <div className="loading"><div className="spinner"></div> Loading history...</div>
+            ) : history && history.length > 0 ? (
+              <div className="chart-container">
+                <canvas ref={chartRef}></canvas>
+              </div>
+            ) : (
+              <div style={{textAlign: 'center', padding: '40px', color: 'var(--text-secondary)'}}>
+                No price history available yet
+              </div>
+            )}
+          </div>
+
+          {/* Price Changes for this product */}
+          {productChanges.length > 0 && (
+            <div className="modal-section">
+              <div className="modal-section-title">Price Changes</div>
+              <table style={{boxShadow: 'none'}}>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Old Price</th>
+                    <th>New Price</th>
+                    <th>Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productChanges.slice(0, 20).map((c, i) => (
+                    <tr key={i}>
+                      <td>{formatDateTime(c.timestamp)}</td>
+                      <td>{formatCurrency(c.oldPrice)}</td>
+                      <td className={c.direction === 'increase' ? 'price-up' : 'price-down'}>
+                        {formatCurrency(c.newPrice)}
+                      </td>
+                      <td className={c.direction === 'increase' ? 'price-up' : 'price-down'}>
+                        {c.direction === 'increase' ? '\u2191' : '\u2193'} {c.changePct}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════
+
+function App() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState('overview');
+  const [accountFilter, setAccountFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Try auto-login from session
+  useEffect(() => {
+    const savedPw = sessionStorage.getItem('bpt_password');
+    if (savedPw) {
+      apiCall('getData')
+        .then(d => {
+          if (d.success) {
+            setData(d);
+            setAuthenticated(true);
+          } else {
+            sessionStorage.removeItem('bpt_password');
+          }
+          setLoading(false);
+        })
+        .catch(() => {
+          sessionStorage.removeItem('bpt_password');
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleLogin = (d) => {
+    setData(d);
+    setAuthenticated(true);
+  };
+
+  const handleExport = () => {
+    if (!data || !data.products) return;
+    let exportData = data.products;
+    if (accountFilter !== 'all') {
+      exportData = exportData.filter(p => p.account === accountFilter);
+    }
+
+    const ws = XLSX.utils.json_to_sheet(exportData.map(p => ({
+      'EAN': p.ean,
+      'Account': p.account,
+      'Product Name': p.productName,
+      'Current Price': p.currentPrice,
+      'Previous Price': p.previousPrice || '',
+      'Price Change Date': p.priceChangeDate,
+      'Stock': p.currentStock,
+      'Fulfilment': p.fulfilmentType,
+      'Status': p.status,
+      'Last Checked': p.lastChecked,
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+    // Also add changes sheet
+    if (data.changes && data.changes.length > 0) {
+      const ws2 = XLSX.utils.json_to_sheet(data.changes.map(c => ({
+        'Date': c.timestamp,
+        'EAN': c.ean,
+        'Account': c.account,
+        'Product': c.productName,
+        'Old Price': c.oldPrice,
+        'New Price': c.newPrice,
+        'Change': c.change,
+        'Change %': c.changePct,
+        'Direction': c.direction,
+      })));
+      XLSX.utils.book_append_sheet(wb, ws2, 'Price Changes');
+    }
+
+    XLSX.writeFile(wb, 'bol-prices-' + new Date().toISOString().slice(0,10) + '.xlsx');
+  };
+
+  if (loading) {
+    return <div className="loading"><div className="spinner"></div> Loading...</div>;
+  }
+
+  if (!authenticated) {
+    return <PasswordScreen onLogin={handleLogin} />;
+  }
+
+  if (!data) {
+    return <div className="loading">No data available</div>;
+  }
+
+  const changeCounts = {
+    recent: data.changes ? data.changes.filter(c => {
+      const d = new Date(c.timestamp);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
+      return d >= cutoff;
+    }).length : 0
+  };
+
+  const activePromos = data.promotions ? data.promotions.filter(p => p.status === 'active').length : 0;
+
+  return (
+    <>
+      {/* Header */}
+      <div className="header">
+        <div className="header-left">
+          <div>
+            <div className="header-title">Bol.com Price Tracker</div>
+          </div>
+        </div>
+        <div className="header-right">
+          <span className="last-run">Last sync: {data.lastRun ? formatDateTime(data.lastRun) : 'Never'}</span>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="nav">
+        <button className={'nav-tab' + (page === 'overview' ? ' active' : '')} onClick={() => setPage('overview')}>
+          Overview <span className="tab-count">{data.totalProducts}</span>
+        </button>
+        <button className={'nav-tab' + (page === 'changes' ? ' active' : '')} onClick={() => setPage('changes')}>
+          Price Changes {changeCounts.recent > 0 && <span className="tab-count">{changeCounts.recent}</span>}
+        </button>
+        <button className={'nav-tab' + (page === 'promotions' ? ' active' : '')} onClick={() => setPage('promotions')}>
+          Promotions {activePromos > 0 && <span className="tab-count">{activePromos}</span>}
+        </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="filter-bar">
+        <input
+          className="search-input"
+          type="text"
+          placeholder="Search by product name or EAN..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <button className={'filter-chip' + (accountFilter === 'all' ? ' active' : '')} onClick={() => setAccountFilter('all')}>
+          All ({data.totalProducts})
+        </button>
+        <button className={'filter-chip' + (accountFilter === 'hombli' ? ' active' : '')} onClick={() => setAccountFilter('hombli')}>
+          Hombli ({data.totalHombli})
+        </button>
+        <button className={'filter-chip' + (accountFilter === 'sinji' ? ' active' : '')} onClick={() => setAccountFilter('sinji')}>
+          Sinji ({data.totalSinji})
+        </button>
+        <div className="filter-spacer"></div>
+        <button className="export-btn" onClick={handleExport}>Export Excel</button>
+      </div>
+
+      {/* Stats Bar */}
+      <div className="stats-bar">
+        <div className="stat-card">
+          <div className="stat-label">Total Products</div>
+          <div className="stat-value accent">{data.totalProducts}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Hombli</div>
+          <div className="stat-value">{data.totalHombli}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Sinji</div>
+          <div className="stat-value">{data.totalSinji}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Changes (7d)</div>
+          <div className={'stat-value' + (changeCounts.recent > 0 ? ' warning' : '')}>{changeCounts.recent}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Active Promotions</div>
+          <div className={'stat-value' + (activePromos > 0 ? ' success' : '')}>{activePromos}</div>
+        </div>
+      </div>
+
+      {/* Page Content */}
+      {page === 'overview' && (
+        <OverviewPage
+          products={data.products}
+          accountFilter={accountFilter}
+          search={search}
+          onProductClick={setSelectedProduct}
+        />
+      )}
+      {page === 'changes' && (
+        <ChangesPage
+          changes={data.changes}
+          accountFilter={accountFilter}
+          search={search}
+          onProductClick={setSelectedProduct}
+          products={data.products}
+        />
+      )}
+      {page === 'promotions' && (
+        <PromotionsPage
+          promotions={data.promotions}
+          accountFilter={accountFilter}
+          search={search}
+        />
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          changes={data.changes || []}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Mount ──
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
