@@ -198,6 +198,11 @@ tr:hover td { background: #f8fafc; }
 .badge-hombli { background: var(--accent-light); color: var(--accent); }
 .badge-sinji { background: var(--info-light); color: var(--info); }
 .badge-promo { background: #fef3c7; color: #d97706; font-size: 10px; padding: 1px 7px; margin-left: 6px; }
+.badge-buybox-yes { background: var(--success-light); color: var(--success); font-size: 10px; padding: 1px 7px; }
+.badge-buybox-no { background: var(--danger-light); color: var(--danger); font-size: 10px; padding: 1px 7px; }
+.buybox-cell { display: flex; flex-direction: column; gap: 2px; }
+.buybox-price { font-weight: 600; font-size: 13px; }
+.buybox-winner { font-size: 11px; color: var(--text-secondary); }
 
 /* Promo price display */
 .price-promo { display: flex; flex-direction: column; gap: 1px; }
@@ -536,7 +541,8 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
               <th onClick={() => handleSort('productName')}>Product{sortArrow('productName')}</th>
               <th onClick={() => handleSort('ean')}>EAN{sortArrow('ean')}</th>
               <th onClick={() => handleSort('account')}>Account{sortArrow('account')}</th>
-              <th onClick={() => handleSort('currentPrice')}>Price{sortArrow('currentPrice')}</th>
+              <th onClick={() => handleSort('currentPrice')}>Our Price{sortArrow('currentPrice')}</th>
+              <th onClick={() => handleSort('buyboxPrice')}>Buybox{sortArrow('buyboxPrice')}</th>
               <th onClick={() => handleSort('currentStock')}>Stock{sortArrow('currentStock')}</th>
               <th onClick={() => handleSort('fulfilmentType')}>Fulfilment{sortArrow('fulfilmentType')}</th>
               <th>Change</th>
@@ -565,6 +571,17 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
                     )}
                     {p.isPromo === 'yes' && <span className="badge badge-promo">PROMO</span>}
                   </td>
+                  <td>
+                    {p.buyboxPrice > 0 ? (
+                      <div className="buybox-cell">
+                        <span className="buybox-price">{formatCurrency(p.buyboxPrice)}</span>
+                        <span className={'badge ' + (p.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')}>
+                          {p.hasBuybox === 'yes' ? 'WON' : 'LOST'}
+                        </span>
+                        {p.numOffers > 1 && <span className="buybox-winner">{p.numOffers} sellers</span>}
+                      </div>
+                    ) : '—'}
+                  </td>
                   <td>{p.currentStock}</td>
                   <td>{p.fulfilmentType}</td>
                   <td>
@@ -582,7 +599,7 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
               );
             })}
             {paged.length === 0 && (
-              <tr><td colSpan="9" style={{textAlign: 'center', padding: '40px', color: 'var(--text-secondary)'}}>
+              <tr><td colSpan="10" style={{textAlign: 'center', padding: '40px', color: 'var(--text-secondary)'}}>
                 No products found
               </td></tr>
             )}
@@ -945,6 +962,34 @@ function ProductDetailModal({ product, changes, onClose }) {
               <div className="modal-stat-label">Previous Price</div>
               <div className="modal-stat-value">{product.previousPrice ? formatCurrency(product.previousPrice) : '—'}</div>
             </div>
+            {product.buyboxPrice > 0 && (
+              <div className="modal-stat">
+                <div className="modal-stat-label">Buybox Price</div>
+                <div className="modal-stat-value">{formatCurrency(product.buyboxPrice)}</div>
+              </div>
+            )}
+            {product.hasBuybox && (
+              <div className="modal-stat">
+                <div className="modal-stat-label">Buybox Status</div>
+                <div className="modal-stat-value">
+                  <span className={'badge ' + (product.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')} style={{fontSize: '12px', padding: '3px 10px'}}>
+                    {product.hasBuybox === 'yes' ? 'WON' : 'LOST'}
+                  </span>
+                </div>
+              </div>
+            )}
+            {product.buyboxWinner && product.hasBuybox !== 'yes' && (
+              <div className="modal-stat">
+                <div className="modal-stat-label">Buybox Winner</div>
+                <div className="modal-stat-value" style={{fontSize: '14px'}}>{product.buyboxWinner}</div>
+              </div>
+            )}
+            {product.numOffers > 0 && (
+              <div className="modal-stat">
+                <div className="modal-stat-label">Competitors</div>
+                <div className="modal-stat-value">{product.numOffers}</div>
+              </div>
+            )}
             <div className="modal-stat">
               <div className="modal-stat-label">Stock</div>
               <div className="modal-stat-value">{product.currentStock}</div>
@@ -1072,9 +1117,13 @@ function App() {
       'EAN': p.ean,
       'Account': p.account,
       'Product Name': p.productName,
-      'Selling Price': p.currentPrice,
+      'Our Price': p.currentPrice,
       'Base Price': p.basePrice || '',
       'On Promo': p.isPromo || 'no',
+      'Buybox Price': p.buyboxPrice || '',
+      'Has Buybox': p.hasBuybox || '',
+      'Buybox Winner': p.buyboxWinner || '',
+      'Sellers': p.numOffers || '',
       'Previous Price': p.previousPrice || '',
       'Price Change Date': p.priceChangeDate,
       'Stock': p.currentStock,
@@ -1126,6 +1175,8 @@ function App() {
   };
 
   const activePromos = data.totalPromos || (data.products ? data.products.filter(p => p.isPromo === 'yes').length : 0);
+  const buyboxLost = data.products ? data.products.filter(p => p.hasBuybox === 'no' && p.buyboxPrice > 0).length : 0;
+  const buyboxWon = data.products ? data.products.filter(p => p.hasBuybox === 'yes').length : 0;
 
   return (
     <>
@@ -1197,6 +1248,14 @@ function App() {
         <div className="stat-card">
           <div className="stat-label">Active Promotions</div>
           <div className={'stat-value' + (activePromos > 0 ? ' success' : '')}>{activePromos}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Buybox Won</div>
+          <div className="stat-value success">{buyboxWon}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Buybox Lost</div>
+          <div className={'stat-value' + (buyboxLost > 0 ? ' warning' : '')}>{buyboxLost}</div>
         </div>
       </div>
 
