@@ -548,6 +548,11 @@ function AlertsPage({ products, changes, onProductClick, onNavigate }) {
     return products.filter(p => p.status === 'out_of_stock' || p.currentStock === 0);
   }, [products]);
 
+  // Section E: Not Online (in stock but inactive)
+  const notOnline = useMemo(() => {
+    return products.filter(p => p.currentStock > 0 && p.status !== 'active');
+  }, [products]);
+
   const findProduct = (ean, account) =>
     products.find(p => p.ean === ean && p.account === account);
 
@@ -683,7 +688,43 @@ function AlertsPage({ products, changes, onProductClick, onNavigate }) {
         </div>
       </div>
 
-      {/* Section D: Out of Stock */}
+      {/* Section D: Not Online (in stock but inactive) */}
+      {notOnline.length > 0 && (
+        <div className="alert-section">
+          <div className="alert-section-header orange">
+            <span>{notOnline.length} product{notOnline.length !== 1 ? 's' : ''} in stock but not online</span>
+            <span className="alert-count">{notOnline.length}</span>
+          </div>
+          <div className="alert-section-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>EAN</th>
+                  <th>Account</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notOnline.map((p, i) => (
+                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                    <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                      {p.productName || '\u2014'}
+                    </td>
+                    <td>{p.ean}</td>
+                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                    <td style={{fontWeight: 600}}>{p.currentStock}</td>
+                    <td><span className={'badge badge-' + p.status}>{p.status.replace('_', ' ')}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Section E: Out of Stock */}
       {outOfStock.length > 0 && (
         <div className="alert-section">
           <div className="alert-section-header grey" onClick={() => setOosCollapsed(c => !c)}>
@@ -744,6 +785,8 @@ function AllProductsPage({ products, accountFilter, buyboxFilter, statusFilter, 
       list = list.filter(p => p.isPromo === 'yes');
     } else if (statusFilter === 'oos') {
       list = list.filter(p => p.status === 'out_of_stock' || p.currentStock === 0);
+    } else if (statusFilter === 'not_online') {
+      list = list.filter(p => p.currentStock > 0 && p.status !== 'active');
     }
     if (search) {
       const q = search.toLowerCase();
@@ -1419,7 +1462,7 @@ function App() {
   const buyboxLost = data.products ? data.products.filter(p => p.hasBuybox === 'no' && p.buyboxPrice > 0).length : 0;
   const buyboxWon = data.products ? data.products.filter(p => p.hasBuybox === 'yes').length : 0;
   const outOfStockCount = data.products ? data.products.filter(p => p.status === 'out_of_stock' || p.currentStock === 0).length : 0;
-  const alertTotal = buyboxLost + (changeCounts.recent > 0 ? 1 : 0) + (activePromos > 0 ? 1 : 0) + (outOfStockCount > 0 ? 1 : 0);
+  const notOnlineCount = data.products ? data.products.filter(p => p.currentStock > 0 && p.status !== 'active').length : 0;
 
   return (
     <>
@@ -1495,6 +1538,9 @@ function App() {
                 <button className={'filter-chip' + (statusFilter === 'oos' ? ' active' : '')} onClick={() => setStatusFilter('oos')}>
                   Out of Stock
                 </button>
+                <button className={'filter-chip' + (statusFilter === 'not_online' ? ' active' : '')} onClick={() => setStatusFilter('not_online')}>
+                  Not Online
+                </button>
               </>
             )}
             <div className="filter-spacer"></div>
@@ -1523,6 +1569,10 @@ function App() {
               <div className="stat-card">
                 <div className="stat-label">Out of Stock</div>
                 <div className={'stat-value' + (outOfStockCount > 0 ? ' danger' : '')}>{outOfStockCount}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Not Online</div>
+                <div className={'stat-value' + (notOnlineCount > 0 ? ' warning' : '')}>{notOnlineCount}</div>
               </div>
             </div>
           )}
