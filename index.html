@@ -120,6 +120,9 @@ body {
 .nav-tab .tab-count {
   background: var(--bg); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px;
 }
+.nav-tab .tab-count-danger {
+  background: var(--danger-light); color: var(--danger); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; font-weight: 600;
+}
 
 /* ── Filter Bar ── */
 .filter-bar {
@@ -138,6 +141,9 @@ body {
 }
 .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
 .filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.filter-divider {
+  width: 1px; height: 24px; background: var(--border);
+}
 .filter-spacer { flex: 1; }
 .export-btn {
   padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600;
@@ -160,6 +166,7 @@ body {
 .stat-value.accent { color: var(--accent); }
 .stat-value.success { color: var(--success); }
 .stat-value.warning { color: var(--warning); }
+.stat-value.danger { color: var(--danger); }
 
 /* ── Table ── */
 .table-container {
@@ -259,6 +266,37 @@ tr:hover td { background: #f8fafc; }
 .promo-remaining.urgent { color: var(--danger); font-weight: 600; }
 .promo-remaining.soon { color: var(--warning); font-weight: 600; }
 
+/* ── Alerts Page ── */
+.alerts-container { padding: 0 24px 24px; }
+.alert-section { margin-bottom: 24px; }
+.alert-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  color: #fff; font-weight: 600; font-size: 15px;
+  cursor: pointer; user-select: none;
+}
+.alert-section-header.red { background: var(--danger); }
+.alert-section-header.orange { background: var(--warning); }
+.alert-section-header.green { background: var(--success); }
+.alert-section-header.grey { background: #94a3b8; }
+.alert-section-header .alert-count {
+  background: rgba(255,255,255,0.25); padding: 2px 12px; border-radius: 12px; font-size: 13px;
+}
+.alert-section-body {
+  background: var(--surface); border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
+}
+.alert-section-body.collapsed { display: none; }
+.alert-section-body table { border-radius: 0; box-shadow: none; }
+.alert-view-all {
+  display: block; text-align: center; padding: 12px;
+  color: var(--accent); font-weight: 600; font-size: 13px;
+  text-decoration: none; cursor: pointer; border-top: 1px solid var(--border);
+  background: none; border-left: none; border-right: none; border-bottom: none; width: 100%;
+}
+.alert-view-all:hover { background: var(--accent-light); }
+.alert-empty { padding: 24px; text-align: center; color: var(--text-secondary); font-size: 14px; }
+
 /* ── Product Detail Modal ── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200;
@@ -285,7 +323,7 @@ tr:hover td { background: #f8fafc; }
 .modal-section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .modal-stats {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .modal-stat { background: var(--bg); border-radius: var(--radius); padding: 12px; }
 .modal-stat-label { font-size: 11px; color: var(--text-secondary); }
@@ -340,6 +378,7 @@ tr:hover td { background: #f8fafc; }
   .stat-card { min-width: 140px; }
   .table-container { padding: 0 16px 16px; }
   .changes-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }
+  .alerts-container { padding: 0 16px 16px; }
   .modal { margin: 12px; }
 }
 </style>
@@ -363,12 +402,12 @@ const { useState, useEffect, useCallback, useMemo, useRef } = React;
 // ═══════════════════════════════════════════════════════════════
 
 function formatCurrency(val) {
-  if (val === null || val === undefined || isNaN(val)) return '—';
+  if (val === null || val === undefined || isNaN(val)) return '\u2014';
   return '\u20AC' + Number(val).toFixed(2);
 }
 
 function formatDate(isoStr) {
-  if (!isoStr) return '—';
+  if (!isoStr) return '\u2014';
   try {
     const d = new Date(isoStr);
     if (isNaN(d.getTime())) return isoStr;
@@ -377,7 +416,7 @@ function formatDate(isoStr) {
 }
 
 function formatDateTime(isoStr) {
-  if (!isoStr) return '—';
+  if (!isoStr) return '\u2014';
   try {
     const d = new Date(isoStr);
     if (isNaN(d.getTime())) return isoStr;
@@ -472,21 +511,239 @@ function PasswordScreen({ onLogin }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// OVERVIEW PAGE
+// ALERTS PAGE (NEW — default landing)
 // ═══════════════════════════════════════════════════════════════
 
-function OverviewPage({ products, accountFilter, search, onProductClick }) {
+function AlertsPage({ products, changes, onProductClick, onNavigate }) {
+  const [oosCollapsed, setOosCollapsed] = useState(true);
+
+  // Section A: Lost Buybox
+  const lostBuybox = useMemo(() => {
+    return products
+      .filter(p => p.hasBuybox === 'no' && p.buyboxPrice > 0)
+      .map(p => ({ ...p, gap: p.currentPrice - p.buyboxPrice }))
+      .sort((a, b) => b.gap - a.gap);
+  }, [products]);
+
+  // Section B: Recent Price Changes (last 7 days)
+  const recentChanges = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    return (changes || []).filter(c => new Date(c.timestamp) >= cutoff);
+  }, [changes]);
+
+  // Section C: Active Promotions
+  const activePromos = useMemo(() => {
+    return products
+      .filter(p => p.isPromo === 'yes' && p.basePrice > 0 && p.currentPrice > 0)
+      .map(p => ({
+        ...p,
+        discountPct: ((1 - p.currentPrice / p.basePrice) * 100)
+      }))
+      .sort((a, b) => b.discountPct - a.discountPct);
+  }, [products]);
+
+  // Section D: Out of Stock
+  const outOfStock = useMemo(() => {
+    return products.filter(p => p.status === 'out_of_stock' || p.currentStock === 0);
+  }, [products]);
+
+  const findProduct = (ean, account) =>
+    products.find(p => p.ean === ean && p.account === account);
+
+  return (
+    <div className="alerts-container">
+      {/* Section A: Lost Buybox */}
+      <div className="alert-section">
+        <div className="alert-section-header red">
+          <span>{lostBuybox.length} product{lostBuybox.length !== 1 ? 's' : ''} where we don't have the buybox</span>
+          <span className="alert-count">{lostBuybox.length}</span>
+        </div>
+        <div className="alert-section-body">
+          {lostBuybox.length === 0 ? (
+            <div className="alert-empty">All buyboxes won!</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>EAN</th>
+                  <th>Account</th>
+                  <th>Our Price</th>
+                  <th>Buybox Price</th>
+                  <th>Gap</th>
+                  <th>Buybox Winner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lostBuybox.map((p, i) => (
+                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                    <td style={{maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                      {p.productName || '\u2014'}
+                    </td>
+                    <td>{p.ean}</td>
+                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                    <td style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</td>
+                    <td style={{fontWeight: 600}}>{formatCurrency(p.buyboxPrice)}</td>
+                    <td className="price-up">+{formatCurrency(p.gap)}</td>
+                    <td style={{fontSize: '12px', color: 'var(--text-secondary)'}}>{p.buyboxWinner || '\u2014'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Section B: Recent Price Changes */}
+      <div className="alert-section">
+        <div className="alert-section-header orange">
+          <span>{recentChanges.length} price change{recentChanges.length !== 1 ? 's' : ''} in the last 7 days</span>
+          <span className="alert-count">{recentChanges.length}</span>
+        </div>
+        <div className="alert-section-body">
+          {recentChanges.length === 0 ? (
+            <div className="alert-empty">No price changes in the last 7 days</div>
+          ) : (
+            <>
+              <div className="changes-grid" style={{padding: '16px'}}>
+                {recentChanges.slice(0, 10).map((c, i) => (
+                  <div
+                    key={i}
+                    className={'change-card ' + c.direction}
+                    onClick={() => {
+                      const prod = findProduct(c.ean, c.account);
+                      if (prod) onProductClick(prod);
+                    }}
+                  >
+                    <div className="change-card-header">
+                      <div className="change-card-product" title={c.productName}>{c.productName || c.ean}</div>
+                      <div className="change-card-time">{timeAgo(c.timestamp)}</div>
+                    </div>
+                    <div className="change-card-prices">
+                      <span className="change-card-old">{formatCurrency(c.oldPrice)}</span>
+                      <span className="change-card-arrow">{'\u2192'}</span>
+                      <span className={'change-card-new ' + (c.direction === 'increase' ? 'price-up' : 'price-down')}>
+                        {formatCurrency(c.newPrice)}
+                      </span>
+                    </div>
+                    <div className="change-card-meta">
+                      <span className={'badge badge-' + c.account}>{c.account}</span>
+                      <span>{c.changePct}</span>
+                      <span>{formatDateTime(c.timestamp)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {recentChanges.length > 10 && (
+                <button className="alert-view-all" onClick={() => onNavigate('changes')}>
+                  View all {recentChanges.length} changes &rarr;
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Section C: Active Promotions */}
+      <div className="alert-section">
+        <div className="alert-section-header green">
+          <span>{activePromos.length} product{activePromos.length !== 1 ? 's' : ''} currently on promotion</span>
+          <span className="alert-count">{activePromos.length}</span>
+        </div>
+        <div className="alert-section-body">
+          {activePromos.length === 0 ? (
+            <div className="alert-empty">No active promotions</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Account</th>
+                  <th>Base Price</th>
+                  <th>Promo Price</th>
+                  <th>Discount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activePromos.map((p, i) => (
+                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                    <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                      {p.productName || '\u2014'}
+                    </td>
+                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                    <td style={{textDecoration: 'line-through', color: 'var(--text-secondary)'}}>{formatCurrency(p.basePrice)}</td>
+                    <td style={{fontWeight: 700, color: 'var(--success)'}}>{formatCurrency(p.currentPrice)}</td>
+                    <td style={{fontWeight: 600, color: 'var(--success)'}}>-{p.discountPct.toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Section D: Out of Stock */}
+      {outOfStock.length > 0 && (
+        <div className="alert-section">
+          <div className="alert-section-header grey" onClick={() => setOosCollapsed(c => !c)}>
+            <span>{outOfStock.length} product{outOfStock.length !== 1 ? 's' : ''} out of stock</span>
+            <span className="alert-count">{oosCollapsed ? '\u25BC' : '\u25B2'} {outOfStock.length}</span>
+          </div>
+          <div className={'alert-section-body' + (oosCollapsed ? ' collapsed' : '')}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>EAN</th>
+                  <th>Account</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outOfStock.map((p, i) => (
+                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                    <td style={{maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                      {p.productName || '\u2014'}
+                    </td>
+                    <td>{p.ean}</td>
+                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ALL PRODUCTS PAGE (formerly Overview)
+// ═══════════════════════════════════════════════════════════════
+
+function AllProductsPage({ products, accountFilter, buyboxFilter, statusFilter, search, onProductClick }) {
   const [sortCol, setSortCol] = useState('productName');
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [accountFilter, search]);
+  useEffect(() => { setPage(1); }, [accountFilter, buyboxFilter, statusFilter, search]);
 
   const filtered = useMemo(() => {
     let list = products;
     if (accountFilter !== 'all') {
       list = list.filter(p => p.account === accountFilter);
+    }
+    if (buyboxFilter === 'won') {
+      list = list.filter(p => p.hasBuybox === 'yes');
+    } else if (buyboxFilter === 'lost') {
+      list = list.filter(p => p.hasBuybox === 'no' && p.buyboxPrice > 0);
+    }
+    if (statusFilter === 'promo') {
+      list = list.filter(p => p.isPromo === 'yes');
+    } else if (statusFilter === 'oos') {
+      list = list.filter(p => p.status === 'out_of_stock' || p.currentStock === 0);
     }
     if (search) {
       const q = search.toLowerCase();
@@ -505,7 +762,7 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
       return 0;
     });
     return list;
-  }, [products, accountFilter, search, sortCol, sortDir]);
+  }, [products, accountFilter, buyboxFilter, statusFilter, search, sortCol, sortDir]);
 
   const totalPages = Math.ceil(filtered.length / CONFIG.PAGE_SIZE);
   const paged = filtered.slice((page - 1) * CONFIG.PAGE_SIZE, page * CONFIG.PAGE_SIZE);
@@ -524,14 +781,6 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
     return sortDir === 'asc' ? ' \u25B2' : ' \u25BC';
   };
 
-  const getPriceChangeIndicator = (product) => {
-    if (product.previousPrice === null || product.previousPrice === undefined) return null;
-    const diff = product.currentPrice - product.previousPrice;
-    if (Math.abs(diff) < 0.01) return null;
-    if (diff > 0) return { cls: 'price-up', arrow: '\u2191', text: '+' + formatCurrency(diff) };
-    return { cls: 'price-down', arrow: '\u2193', text: formatCurrency(diff) };
-  };
-
   return (
     <>
       <div className="table-container">
@@ -544,62 +793,47 @@ function OverviewPage({ products, accountFilter, search, onProductClick }) {
               <th onClick={() => handleSort('currentPrice')}>Our Price{sortArrow('currentPrice')}</th>
               <th onClick={() => handleSort('buyboxPrice')}>Buybox{sortArrow('buyboxPrice')}</th>
               <th onClick={() => handleSort('currentStock')}>Stock{sortArrow('currentStock')}</th>
-              <th onClick={() => handleSort('fulfilmentType')}>Fulfilment{sortArrow('fulfilmentType')}</th>
-              <th>Change</th>
               <th onClick={() => handleSort('status')}>Status{sortArrow('status')}</th>
               <th onClick={() => handleSort('lastChecked')}>Last Checked{sortArrow('lastChecked')}</th>
             </tr>
           </thead>
           <tbody>
-            {paged.map((p, i) => {
-              const indicator = getPriceChangeIndicator(p);
-              return (
-                <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
-                  <td style={{maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
-                    {p.productName || '—'}
-                  </td>
-                  <td>{p.ean}</td>
-                  <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
-                  <td>
-                    {p.isPromo === 'yes' && p.basePrice > 0 ? (
-                      <div className="price-promo">
-                        <span className="actual-price">{formatCurrency(p.currentPrice)}</span>
-                        <span className="base-price">{formatCurrency(p.basePrice)}</span>
-                      </div>
-                    ) : (
-                      <span style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</span>
-                    )}
-                    {p.isPromo === 'yes' && <span className="badge badge-promo">PROMO</span>}
-                  </td>
-                  <td>
-                    {p.buyboxPrice > 0 ? (
-                      <div className="buybox-cell">
-                        <span className="buybox-price">{formatCurrency(p.buyboxPrice)}</span>
-                        <span className={'badge ' + (p.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')}>
-                          {p.hasBuybox === 'yes' ? 'WON' : 'LOST'}
-                        </span>
-                        {p.numOffers > 1 && <span className="buybox-winner">{p.numOffers} sellers</span>}
-                      </div>
-                    ) : '—'}
-                  </td>
-                  <td>{p.currentStock}</td>
-                  <td>{p.fulfilmentType}</td>
-                  <td>
-                    {indicator ? (
-                      <span className={indicator.cls}>
-                        {indicator.arrow} {indicator.text}
+            {paged.map((p, i) => (
+              <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                <td style={{maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                  {p.productName || '\u2014'}
+                </td>
+                <td>{p.ean}</td>
+                <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                <td>
+                  {p.isPromo === 'yes' && p.basePrice > 0 ? (
+                    <div className="price-promo">
+                      <span className="actual-price">{formatCurrency(p.currentPrice)}</span>
+                      <span className="base-price">{formatCurrency(p.basePrice)}</span>
+                    </div>
+                  ) : (
+                    <span style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</span>
+                  )}
+                  {p.isPromo === 'yes' && <span className="badge badge-promo">PROMO</span>}
+                </td>
+                <td>
+                  {p.buyboxPrice > 0 ? (
+                    <div className="buybox-cell">
+                      <span className="buybox-price">{formatCurrency(p.buyboxPrice)}</span>
+                      <span className={'badge ' + (p.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')}>
+                        {p.hasBuybox === 'yes' ? 'WON' : 'LOST'}
                       </span>
-                    ) : (
-                      <span className="price-same">—</span>
-                    )}
-                  </td>
-                  <td><span className={'badge badge-' + p.status}>{p.status.replace('_', ' ')}</span></td>
-                  <td title={p.lastChecked}>{timeAgo(p.lastChecked) || formatDate(p.lastChecked)}</td>
-                </tr>
-              );
-            })}
+                      {p.numOffers > 1 && <span className="buybox-winner">{p.numOffers} sellers</span>}
+                    </div>
+                  ) : '\u2014'}
+                </td>
+                <td>{p.currentStock}</td>
+                <td><span className={'badge badge-' + p.status}>{p.status.replace('_', ' ')}</span></td>
+                <td title={p.lastChecked}>{timeAgo(p.lastChecked) || formatDate(p.lastChecked)}</td>
+              </tr>
+            ))}
             {paged.length === 0 && (
-              <tr><td colSpan="10" style={{textAlign: 'center', padding: '40px', color: 'var(--text-secondary)'}}>
+              <tr><td colSpan="8" style={{textAlign: 'center', padding: '40px', color: 'var(--text-secondary)'}}>
                 No products found
               </td></tr>
             )}
@@ -681,7 +915,7 @@ function ChangesPage({ changes, accountFilter, search, onProductClick, products 
               </div>
               <div className="change-card-prices">
                 <span className="change-card-old">{formatCurrency(c.oldPrice)}</span>
-                <span className="change-card-arrow">{c.direction === 'increase' ? '\u2192' : '\u2192'}</span>
+                <span className="change-card-arrow">{'\u2192'}</span>
                 <span className={'change-card-new ' + (c.direction === 'increase' ? 'price-up' : 'price-down')}>
                   {formatCurrency(c.newPrice)}
                 </span>
@@ -708,13 +942,11 @@ function PromotionsPage({ promotions, accountFilter, search, products }) {
 
   // Merge API promotions with auto-detected promos from products
   const allPromos = useMemo(() => {
-    // Start with API promotions
     const promoMap = {};
     promotions.forEach(p => {
       promoMap[p.ean + '|' + p.account] = p;
     });
 
-    // Add auto-detected promos from products (where isPromo=yes but not in API promos)
     if (products) {
       products.forEach(p => {
         if (p.isPromo === 'yes' && p.basePrice > 0 && p.currentPrice > 0) {
@@ -756,7 +988,6 @@ function PromotionsPage({ promotions, accountFilter, search, products }) {
     if (statusFilter !== 'all') {
       list = list.filter(p => p.status === statusFilter);
     }
-    // Sort by discount (largest first), then by name
     list = [...list].sort((a, b) => {
       const da = parseFloat(a.discount) || 0;
       const db = parseFloat(b.discount) || 0;
@@ -852,7 +1083,6 @@ function ProductDetailModal({ product, changes, onClose }) {
   useEffect(() => {
     if (!history || !chartRef.current) return;
 
-    // Filter by time range
     let data = history;
     if (timeRange !== 'all') {
       const days = parseInt(timeRange);
@@ -941,66 +1171,76 @@ function ProductDetailModal({ product, changes, onClose }) {
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
-          {/* Stats */}
-          <div className="modal-stats">
-            <div className="modal-stat">
-              <div className="modal-stat-label">Selling Price</div>
-              <div className="modal-stat-value" style={product.isPromo === 'yes' ? {color: 'var(--success)'} : {}}>
-                {formatCurrency(product.currentPrice)}
-                {product.isPromo === 'yes' && <span className="badge badge-promo" style={{marginLeft: 8, verticalAlign: 'middle'}}>PROMO</span>}
-              </div>
-            </div>
-            {product.basePrice > 0 && product.basePrice !== product.currentPrice && (
+          {/* Row 1: Pricing */}
+          <div className="modal-section">
+            <div className="modal-section-title">Pricing</div>
+            <div className="modal-stats">
               <div className="modal-stat">
-                <div className="modal-stat-label">Base Price</div>
-                <div className="modal-stat-value" style={{textDecoration: product.isPromo === 'yes' ? 'line-through' : 'none', color: 'var(--text-secondary)'}}>
-                  {formatCurrency(product.basePrice)}
+                <div className="modal-stat-label">Our Price</div>
+                <div className="modal-stat-value" style={product.isPromo === 'yes' ? {color: 'var(--success)'} : {}}>
+                  {formatCurrency(product.currentPrice)}
+                  {product.isPromo === 'yes' && <span className="badge badge-promo" style={{marginLeft: 8, verticalAlign: 'middle'}}>PROMO</span>}
                 </div>
               </div>
-            )}
-            <div className="modal-stat">
-              <div className="modal-stat-label">Previous Price</div>
-              <div className="modal-stat-value">{product.previousPrice ? formatCurrency(product.previousPrice) : '—'}</div>
-            </div>
-            {product.buyboxPrice > 0 && (
+              {product.basePrice > 0 && product.basePrice !== product.currentPrice && (
+                <div className="modal-stat">
+                  <div className="modal-stat-label">Base Price</div>
+                  <div className="modal-stat-value" style={{textDecoration: product.isPromo === 'yes' ? 'line-through' : 'none', color: 'var(--text-secondary)'}}>
+                    {formatCurrency(product.basePrice)}
+                  </div>
+                </div>
+              )}
               <div className="modal-stat">
                 <div className="modal-stat-label">Buybox Price</div>
-                <div className="modal-stat-value">{formatCurrency(product.buyboxPrice)}</div>
+                <div className="modal-stat-value">{product.buyboxPrice > 0 ? formatCurrency(product.buyboxPrice) : '\u2014'}</div>
               </div>
-            )}
-            {product.hasBuybox && (
               <div className="modal-stat">
                 <div className="modal-stat-label">Buybox Status</div>
                 <div className="modal-stat-value">
-                  <span className={'badge ' + (product.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')} style={{fontSize: '12px', padding: '3px 10px'}}>
-                    {product.hasBuybox === 'yes' ? 'WON' : 'LOST'}
-                  </span>
+                  {product.hasBuybox ? (
+                    <span className={'badge ' + (product.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')} style={{fontSize: '12px', padding: '3px 10px'}}>
+                      {product.hasBuybox === 'yes' ? 'WON' : 'LOST'}
+                    </span>
+                  ) : '\u2014'}
                 </div>
               </div>
-            )}
-            {product.buyboxWinner && product.hasBuybox !== 'yes' && (
+              {product.buyboxWinner && product.hasBuybox !== 'yes' && (
+                <div className="modal-stat">
+                  <div className="modal-stat-label">Buybox Winner</div>
+                  <div className="modal-stat-value" style={{fontSize: '14px'}}>{product.buyboxWinner}</div>
+                </div>
+              )}
               <div className="modal-stat">
-                <div className="modal-stat-label">Buybox Winner</div>
-                <div className="modal-stat-value" style={{fontSize: '14px'}}>{product.buyboxWinner}</div>
+                <div className="modal-stat-label"># Sellers</div>
+                <div className="modal-stat-value">{product.numOffers > 0 ? product.numOffers : '\u2014'}</div>
               </div>
-            )}
-            {product.numOffers > 0 && (
+            </div>
+          </div>
+
+          {/* Row 2: Product Info */}
+          <div className="modal-section">
+            <div className="modal-section-title">Product Info</div>
+            <div className="modal-stats">
               <div className="modal-stat">
-                <div className="modal-stat-label">Competitors</div>
-                <div className="modal-stat-value">{product.numOffers}</div>
+                <div className="modal-stat-label">Stock</div>
+                <div className="modal-stat-value">{product.currentStock}</div>
               </div>
-            )}
-            <div className="modal-stat">
-              <div className="modal-stat-label">Stock</div>
-              <div className="modal-stat-value">{product.currentStock}</div>
-            </div>
-            <div className="modal-stat">
-              <div className="modal-stat-label">Fulfilment</div>
-              <div className="modal-stat-value">{product.fulfilmentType}</div>
-            </div>
-            <div className="modal-stat">
-              <div className="modal-stat-label">Status</div>
-              <div className="modal-stat-value"><span className={'badge badge-' + product.status}>{product.status.replace('_', ' ')}</span></div>
+              <div className="modal-stat">
+                <div className="modal-stat-label">Fulfilment</div>
+                <div className="modal-stat-value">{product.fulfilmentType}</div>
+              </div>
+              <div className="modal-stat">
+                <div className="modal-stat-label">Status</div>
+                <div className="modal-stat-value"><span className={'badge badge-' + product.status}>{product.status.replace('_', ' ')}</span></div>
+              </div>
+              <div className="modal-stat">
+                <div className="modal-stat-label">Previous Price</div>
+                <div className="modal-stat-value">{product.previousPrice ? formatCurrency(product.previousPrice) : '\u2014'}</div>
+              </div>
+              <div className="modal-stat">
+                <div className="modal-stat-label">Last Checked</div>
+                <div className="modal-stat-value" style={{fontSize: '14px'}}>{timeAgo(product.lastChecked) || formatDate(product.lastChecked)}</div>
+              </div>
             </div>
           </div>
 
@@ -1073,8 +1313,10 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState('overview');
+  const [page, setPage] = useState('alerts');
   const [accountFilter, setAccountFilter] = useState('all');
+  const [buyboxFilter, setBuyboxFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -1134,7 +1376,6 @@ function App() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Products');
 
-    // Also add changes sheet
     if (data.changes && data.changes.length > 0) {
       const ws2 = XLSX.utils.json_to_sheet(data.changes.map(c => ({
         'Date': c.timestamp,
@@ -1177,6 +1418,8 @@ function App() {
   const activePromos = data.totalPromos || (data.products ? data.products.filter(p => p.isPromo === 'yes').length : 0);
   const buyboxLost = data.products ? data.products.filter(p => p.hasBuybox === 'no' && p.buyboxPrice > 0).length : 0;
   const buyboxWon = data.products ? data.products.filter(p => p.hasBuybox === 'yes').length : 0;
+  const outOfStockCount = data.products ? data.products.filter(p => p.status === 'out_of_stock' || p.currentStock === 0).length : 0;
+  const alertTotal = buyboxLost + (changeCounts.recent > 0 ? 1 : 0) + (activePromos > 0 ? 1 : 0) + (outOfStockCount > 0 ? 1 : 0);
 
   return (
     <>
@@ -1194,8 +1437,11 @@ function App() {
 
       {/* Navigation */}
       <div className="nav">
-        <button className={'nav-tab' + (page === 'overview' ? ' active' : '')} onClick={() => setPage('overview')}>
-          Overview <span className="tab-count">{data.totalProducts}</span>
+        <button className={'nav-tab' + (page === 'alerts' ? ' active' : '')} onClick={() => setPage('alerts')}>
+          Alerts {buyboxLost > 0 && <span className="tab-count-danger">{buyboxLost}</span>}
+        </button>
+        <button className={'nav-tab' + (page === 'products' ? ' active' : '')} onClick={() => setPage('products')}>
+          All Products <span className="tab-count">{data.totalProducts}</span>
         </button>
         <button className={'nav-tab' + (page === 'changes' ? ' active' : '')} onClick={() => setPage('changes')}>
           Price Changes {changeCounts.recent > 0 && <span className="tab-count">{changeCounts.recent}</span>}
@@ -1205,65 +1451,99 @@ function App() {
         </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="filter-bar">
-        <input
-          className="search-input"
-          type="text"
-          placeholder="Search by product name or EAN..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <button className={'filter-chip' + (accountFilter === 'all' ? ' active' : '')} onClick={() => setAccountFilter('all')}>
-          All ({data.totalProducts})
-        </button>
-        <button className={'filter-chip' + (accountFilter === 'hombli' ? ' active' : '')} onClick={() => setAccountFilter('hombli')}>
-          Hombli ({data.totalHombli})
-        </button>
-        <button className={'filter-chip' + (accountFilter === 'sinji' ? ' active' : '')} onClick={() => setAccountFilter('sinji')}>
-          Sinji ({data.totalSinji})
-        </button>
-        <div className="filter-spacer"></div>
-        <button className="export-btn" onClick={handleExport}>Export Excel</button>
-      </div>
+      {/* Filter Bar — shown on All Products, Price Changes, Promotions */}
+      {page !== 'alerts' && (
+        <>
+          <div className="filter-bar">
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search by product name or EAN..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {/* Account filter */}
+            <button className={'filter-chip' + (accountFilter === 'all' ? ' active' : '')} onClick={() => setAccountFilter('all')}>
+              All
+            </button>
+            <button className={'filter-chip' + (accountFilter === 'hombli' ? ' active' : '')} onClick={() => setAccountFilter('hombli')}>
+              Hombli
+            </button>
+            <button className={'filter-chip' + (accountFilter === 'sinji' ? ' active' : '')} onClick={() => setAccountFilter('sinji')}>
+              Sinji
+            </button>
+            {/* Buybox + Status filters only on All Products */}
+            {page === 'products' && (
+              <>
+                <div className="filter-divider"></div>
+                <button className={'filter-chip' + (buyboxFilter === 'all' ? ' active' : '')} onClick={() => setBuyboxFilter('all')}>
+                  All Buybox
+                </button>
+                <button className={'filter-chip' + (buyboxFilter === 'won' ? ' active' : '')} onClick={() => setBuyboxFilter('won')}>
+                  Won
+                </button>
+                <button className={'filter-chip' + (buyboxFilter === 'lost' ? ' active' : '')} onClick={() => setBuyboxFilter('lost')}>
+                  Lost
+                </button>
+                <div className="filter-divider"></div>
+                <button className={'filter-chip' + (statusFilter === 'all' ? ' active' : '')} onClick={() => setStatusFilter('all')}>
+                  All Status
+                </button>
+                <button className={'filter-chip' + (statusFilter === 'promo' ? ' active' : '')} onClick={() => setStatusFilter('promo')}>
+                  On Promo
+                </button>
+                <button className={'filter-chip' + (statusFilter === 'oos' ? ' active' : '')} onClick={() => setStatusFilter('oos')}>
+                  Out of Stock
+                </button>
+              </>
+            )}
+            <div className="filter-spacer"></div>
+            {page === 'products' && <button className="export-btn" onClick={handleExport}>Export Excel</button>}
+          </div>
 
-      {/* Stats Bar */}
-      <div className="stats-bar">
-        <div className="stat-card">
-          <div className="stat-label">Total Products</div>
-          <div className="stat-value accent">{data.totalProducts}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Hombli</div>
-          <div className="stat-value">{data.totalHombli}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Sinji</div>
-          <div className="stat-value">{data.totalSinji}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Changes (7d)</div>
-          <div className={'stat-value' + (changeCounts.recent > 0 ? ' warning' : '')}>{changeCounts.recent}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Active Promotions</div>
-          <div className={'stat-value' + (activePromos > 0 ? ' success' : '')}>{activePromos}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Buybox Won</div>
-          <div className="stat-value success">{buyboxWon}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Buybox Lost</div>
-          <div className={'stat-value' + (buyboxLost > 0 ? ' warning' : '')}>{buyboxLost}</div>
-        </div>
-      </div>
+          {/* Stats Bar — only on All Products */}
+          {page === 'products' && (
+            <div className="stats-bar">
+              <div className="stat-card">
+                <div className="stat-label">Total Products</div>
+                <div className="stat-value accent">{data.totalProducts}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Buybox Won</div>
+                <div className="stat-value success">{buyboxWon}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Buybox Lost</div>
+                <div className={'stat-value' + (buyboxLost > 0 ? ' danger' : '')}>{buyboxLost}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">On Promo</div>
+                <div className={'stat-value' + (activePromos > 0 ? ' warning' : '')}>{activePromos}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Out of Stock</div>
+                <div className={'stat-value' + (outOfStockCount > 0 ? ' danger' : '')}>{outOfStockCount}</div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Page Content */}
-      {page === 'overview' && (
-        <OverviewPage
+      {page === 'alerts' && (
+        <AlertsPage
+          products={data.products}
+          changes={data.changes || []}
+          onProductClick={setSelectedProduct}
+          onNavigate={setPage}
+        />
+      )}
+      {page === 'products' && (
+        <AllProductsPage
           products={data.products}
           accountFilter={accountFilter}
+          buyboxFilter={buyboxFilter}
+          statusFilter={statusFilter}
           search={search}
           onProductClick={setSelectedProduct}
         />
