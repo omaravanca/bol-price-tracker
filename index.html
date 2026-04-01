@@ -34,10 +34,12 @@
   --danger-light: #fee2e2;
   --info: #6366f1;
   --info-light: #e0e7ff;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
-  --radius: 8px;
-  --radius-lg: 12px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg: 0 2px 4px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.08);
+  --shadow-xl: 0 4px 8px rgba(0,0,0,0.04), 0 16px 48px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 24px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -89,9 +91,9 @@ body {
   border-bottom: 1px solid var(--border);
   padding: 0 24px;
   display: flex; align-items: center; justify-content: space-between;
-  height: 56px;
+  height: 60px;
   position: sticky; top: 0; z-index: 100;
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 24px rgba(0,0,0,0.06);
 }
 .header-left { display: flex; align-items: center; gap: 16px; }
 .header-title { font-size: 18px; font-weight: 700; }
@@ -103,25 +105,36 @@ body {
 .nav {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  display: flex; align-items: center; gap: 0;
+  padding: 8px 24px;
+  display: flex; align-items: center; gap: 4px;
 }
 .nav-tab {
-  padding: 12px 20px;
+  padding: 8px 18px;
   font-size: 14px; font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border: none;
+  border-radius: var(--radius-pill);
   transition: all 0.2s;
-  background: none; border-top: none; border-left: none; border-right: none;
+  background: none;
 }
-.nav-tab:hover { color: var(--text); }
-.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.nav-tab:hover { background: var(--bg); color: var(--text); }
+.nav-tab.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
 .nav-tab .tab-count {
-  background: var(--bg); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px;
+  background: rgba(255,255,255,0.2); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px;
+}
+.nav-tab:not(.active) .tab-count {
+  background: var(--bg); color: var(--text-secondary);
 }
 .nav-tab .tab-count-danger {
-  background: var(--danger-light); color: var(--danger); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; font-weight: 600;
+  background: rgba(255,255,255,0.25); color: #fff; padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; font-weight: 600;
+}
+.nav-tab:not(.active) .tab-count-danger {
+  background: var(--danger-light); color: var(--danger);
 }
 
 /* ── Filter Bar ── */
@@ -135,7 +148,7 @@ body {
 }
 .search-input:focus { border-color: var(--accent); }
 .filter-chip {
-  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  padding: 6px 14px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 500;
   cursor: pointer; border: 1px solid var(--border); background: var(--surface);
   color: var(--text-secondary); transition: all 0.2s;
 }
@@ -160,9 +173,17 @@ body {
 .stat-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px 20px; min-width: 160px; flex: 1;
+  border-left: 3px solid var(--border);
+  box-shadow: var(--shadow);
+  transition: all 0.2s;
 }
+.stat-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.stat-card.accent-left { border-left-color: var(--accent); }
+.stat-card.success-left { border-left-color: var(--success); }
+.stat-card.danger-left { border-left-color: var(--danger); }
+.stat-card.warning-left { border-left-color: var(--warning); }
 .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 4px; }
-.stat-value { font-size: 24px; font-weight: 700; }
+.stat-value { font-size: 28px; font-weight: 700; }
 .stat-value.accent { color: var(--accent); }
 .stat-value.success { color: var(--success); }
 .stat-value.warning { color: var(--warning); }
@@ -179,7 +200,7 @@ table {
   overflow: hidden; box-shadow: var(--shadow);
 }
 th {
-  text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600;
+  text-align: left; padding: 14px 16px; font-size: 12px; font-weight: 600;
   color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
   background: var(--bg); border-bottom: 1px solid var(--border);
   cursor: pointer; user-select: none; white-space: nowrap;
@@ -187,11 +208,13 @@ th {
 th:hover { color: var(--text); }
 th .sort-arrow { margin-left: 4px; font-size: 10px; }
 td {
-  padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border);
+  padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f8fafc; }
+tbody tr:nth-child(even) td { background: #fafbfc; }
+tbody tr:nth-child(even):hover td { background: #f1f5f9; }
 .clickable-row { cursor: pointer; }
 
 /* ── Badges ── */
@@ -221,54 +244,86 @@ tr:hover td { background: #f8fafc; }
 .price-down { color: var(--success); font-weight: 600; }
 .price-same { color: var(--text-secondary); }
 
-/* ── Change Cards ── */
-.changes-grid {
-  padding: 0 24px 24px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px;
+/* ── Alert Summary Cards ── */
+.alert-summary-row {
+  padding: 24px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
 }
-.change-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 16px; transition: box-shadow 0.2s; cursor: pointer;
+.alert-summary-card {
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  display: flex; flex-direction: column; justify-content: space-between;
 }
-.change-card:hover { box-shadow: var(--shadow-lg); }
-.change-card.increase { border-left: 4px solid var(--danger); }
-.change-card.decrease { border-left: 4px solid var(--success); }
-.change-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-.change-card-product { font-weight: 600; font-size: 14px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.change-card-time { font-size: 11px; color: var(--text-secondary); }
-.change-card-prices { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.change-card-old { color: var(--text-secondary); text-decoration: line-through; font-size: 14px; }
-.change-card-arrow { font-size: 16px; }
-.change-card-new { font-weight: 700; font-size: 16px; }
-.change-card-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+.alert-summary-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.alert-summary-card:hover { transform: translateY(-3px) scale(1.02); }
+.alert-summary-card.active { ring: 2px solid #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
+.alert-summary-card.red { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 4px 20px rgba(239,68,68,0.3); }
+.alert-summary-card.red:hover { box-shadow: 0 8px 32px rgba(239,68,68,0.4); }
+.alert-summary-card.orange { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 4px 20px rgba(245,158,11,0.3); }
+.alert-summary-card.orange:hover { box-shadow: 0 8px 32px rgba(245,158,11,0.4); }
+.alert-summary-card.green { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+.alert-summary-card.green:hover { box-shadow: 0 8px 32px rgba(34,197,94,0.4); }
+.alert-summary-card.amber { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); box-shadow: 0 4px 20px rgba(245,158,11,0.3); }
+.alert-summary-card.amber:hover { box-shadow: 0 8px 32px rgba(245,158,11,0.4); }
+.alert-summary-card.grey { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); box-shadow: 0 4px 20px rgba(148,163,184,0.3); }
+.alert-summary-card.grey:hover { box-shadow: 0 8px 32px rgba(148,163,184,0.4); }
+.alert-summary-icon { opacity: 0.9; margin-bottom: 8px; }
+.alert-summary-count { font-size: 36px; font-weight: 800; line-height: 1; }
+.alert-summary-label { font-size: 13px; font-weight: 500; opacity: 0.9; margin-top: 4px; }
+.alert-summary-card-selected { outline: 3px solid rgba(255,255,255,0.6); outline-offset: -3px; }
 
-/* ── Promotions ── */
-.promo-list {
-  padding: 0 24px 24px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.promo-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
-}
-.promo-card.ending-soon { border-left: 4px solid var(--warning); }
-.promo-card.ended { opacity: 0.6; }
-.promo-info { flex: 1; min-width: 0; }
-.promo-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.promo-ean { font-size: 12px; color: var(--text-secondary); }
-.promo-prices { text-align: right; }
-.promo-regular { font-size: 13px; color: var(--text-secondary); text-decoration: line-through; }
-.promo-discounted { font-size: 18px; font-weight: 700; color: var(--success); }
-.promo-discount { font-size: 12px; color: var(--success); font-weight: 600; }
-.promo-dates { text-align: right; min-width: 120px; }
-.promo-end { font-size: 13px; font-weight: 600; }
-.promo-remaining { font-size: 12px; }
-.promo-remaining.urgent { color: var(--danger); font-weight: 600; }
-.promo-remaining.soon { color: var(--warning); font-weight: 600; }
-
-/* ── Alerts Page ── */
+/* ── Alert Detail Sections ── */
 .alerts-container { padding: 0 24px 24px; }
 .alert-section { margin-bottom: 24px; }
+.alert-detail-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  animation: slideDown 0.2s ease-out;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.alert-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  font-weight: 600; font-size: 15px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.alert-detail-header .section-count {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 2px 12px; border-radius: 12px; font-size: 13px; color: var(--text-secondary);
+}
+.alert-detail-section table { border-radius: 0; box-shadow: none; }
+.alert-detail-section .gap-cell-red { background: rgba(220,38,38,0.06); }
+.alert-view-all {
+  display: block; text-align: center; padding: 14px;
+  color: var(--accent); font-weight: 600; font-size: 13px;
+  text-decoration: none; cursor: pointer; border-top: 1px solid var(--border);
+  background: none; border-left: none; border-right: none; border-bottom: none; width: 100%;
+  transition: background 0.2s;
+}
+.alert-view-all:hover { background: var(--accent-light); }
+.alert-empty { padding: 32px; text-align: center; color: var(--text-secondary); font-size: 14px; }
+
+/* Legacy alert section headers (for sections without summary cards) */
 .alert-section-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 20px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -288,14 +343,55 @@ tr:hover td { background: #f8fafc; }
 }
 .alert-section-body.collapsed { display: none; }
 .alert-section-body table { border-radius: 0; box-shadow: none; }
-.alert-view-all {
-  display: block; text-align: center; padding: 12px;
-  color: var(--accent); font-weight: 600; font-size: 13px;
-  text-decoration: none; cursor: pointer; border-top: 1px solid var(--border);
-  background: none; border-left: none; border-right: none; border-bottom: none; width: 100%;
+
+/* ── Change Cards ── */
+.changes-grid {
+  padding: 0 24px 24px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;
 }
-.alert-view-all:hover { background: var(--accent-light); }
-.alert-empty { padding: 24px; text-align: center; color: var(--text-secondary); font-size: 14px; }
+.change-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; transition: all 0.2s; cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.change-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.change-card.increase { border-left: 4px solid var(--danger); }
+.change-card.decrease { border-left: 4px solid var(--success); }
+.change-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.change-card-product { font-weight: 600; font-size: 14px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.change-card-time { font-size: 11px; color: var(--text-secondary); }
+.change-card-prices { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.change-card-old { color: var(--text-secondary); text-decoration: line-through; font-size: 15px; }
+.change-card-arrow { font-size: 16px; }
+.change-card-new { font-weight: 700; font-size: 18px; }
+.change-card-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+
+/* ── Promotions ── */
+.promo-list {
+  padding: 0 24px 24px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.promo-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  box-shadow: var(--shadow);
+  transition: all 0.2s;
+}
+.promo-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.promo-card.ending-soon { border-left: 4px solid var(--warning); }
+.promo-card.ended { opacity: 0.6; }
+.promo-info { flex: 1; min-width: 0; }
+.promo-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.promo-ean { font-size: 12px; color: var(--text-secondary); }
+.promo-prices { text-align: right; }
+.promo-regular { font-size: 13px; color: var(--text-secondary); text-decoration: line-through; }
+.promo-discounted { font-size: 20px; font-weight: 700; color: var(--success); }
+.promo-discount { font-size: 12px; color: var(--success); font-weight: 600; }
+.promo-dates { text-align: right; min-width: 120px; }
+.promo-end { font-size: 13px; font-weight: 600; }
+.promo-remaining { font-size: 12px; }
+.promo-remaining.urgent { color: var(--danger); font-weight: 600; }
+.promo-remaining.soon { color: var(--warning); font-weight: 600; }
 
 /* ── Product Detail Modal ── */
 .modal-overlay {
@@ -305,29 +401,32 @@ tr:hover td { background: #f8fafc; }
 .modal {
   background: var(--surface); border-radius: var(--radius-lg);
   width: 800px; max-width: 100%; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-xl);
 }
 .modal-header {
-  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  padding: 24px 32px; border-bottom: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: flex-start;
 }
-.modal-title { font-size: 18px; font-weight: 700; }
-.modal-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.modal-title { font-size: 20px; font-weight: 700; }
+.modal-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 .modal-close {
   background: none; border: none; font-size: 24px; cursor: pointer;
   color: var(--text-secondary); padding: 0 4px;
 }
 .modal-close:hover { color: var(--text); }
-.modal-body { padding: 24px; }
-.modal-section { margin-bottom: 24px; }
-.modal-section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.modal-body { padding: 32px; }
+.modal-section { margin-bottom: 28px; }
+.modal-section + .modal-section { border-top: 1px solid var(--border); padding-top: 28px; }
+.modal-section-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .modal-stats {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;
   margin-bottom: 16px;
 }
-.modal-stat { background: var(--bg); border-radius: var(--radius); padding: 12px; }
+.modal-stat { background: var(--bg); border-radius: var(--radius); padding: 16px; }
 .modal-stat-label { font-size: 11px; color: var(--text-secondary); }
 .modal-stat-value { font-size: 18px; font-weight: 700; }
+.modal-stat-value.hero { font-size: 24px; }
+.modal-stat .buybox-badge-lg { font-size: 13px; padding: 4px 14px; }
 .chart-container { height: 300px; position: relative; }
 
 /* ── Date filter ── */
@@ -362,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 }
 .page-btn {
   padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); cursor: pointer; font-size: 13px;
+  background: var(--surface); cursor: pointer; font-size: 13px; transition: all 0.2s;
 }
 .page-btn:hover { background: var(--bg); }
 .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -379,7 +478,11 @@ tr:hover td { background: #f8fafc; }
   .table-container { padding: 0 16px 16px; }
   .changes-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }
   .alerts-container { padding: 0 16px 16px; }
+  .alert-summary-row { padding: 16px; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .alert-summary-card { min-height: 100px; padding: 16px; }
+  .alert-summary-count { font-size: 28px; }
   .modal { margin: 12px; }
+  .modal-body { padding: 20px; }
 }
 </style>
 </head>
@@ -396,6 +499,67 @@ const CONFIG = {
 };
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// INLINE SVG ICONS (20x20)
+// ═══════════════════════════════════════════════════════════════
+
+function IconShield({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2L3 5.5V9.5C3 13.64 6.04 17.5 10 18.5C13.96 17.5 17 13.64 17 9.5V5.5L10 2Z" />
+    </svg>
+  );
+}
+
+function IconTrendingUp({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="17 6 11 12 8 9 3 14" />
+      <polyline points="13 6 17 6 17 10" />
+    </svg>
+  );
+}
+
+function IconTag({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 10.3V3.5A1.5 1.5 0 013.5 2h6.8a1.5 1.5 0 011.06.44l6.2 6.2a1.5 1.5 0 010 2.12l-6.2 6.2a1.5 1.5 0 01-2.12 0l-6.2-6.2A1.5 1.5 0 012 10.3Z" />
+      <circle cx="6.5" cy="6.5" r="1" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
+function IconEyeOff({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 2.5L17.5 17.5" />
+      <path d="M8.36 8.36a2.25 2.25 0 003.28 3.28" />
+      <path d="M4.5 6.18C3.14 7.35 2.14 8.88 1.5 10c1.27 2.24 4.04 6 8.5 6 1.4 0 2.64-.38 3.72-1" />
+      <path d="M14.7 13A8.46 8.46 0 0018.5 10c-1.27-2.24-4.04-6-8.5-6-.92 0-1.8.14-2.6.4" />
+    </svg>
+  );
+}
+
+function IconPackage({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 6.25L10 2.5L17.5 6.25V13.75L10 17.5L2.5 13.75V6.25Z" />
+      <path d="M2.5 6.25L10 10M10 10L17.5 6.25M10 10V17.5" />
+      <path d="M6.25 4.375L13.75 8.125" />
+    </svg>
+  );
+}
+
+function IconAlertTriangle({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8.57 3.22L1.52 15a1.5 1.5 0 001.3 2.25h14.06a1.5 1.5 0 001.3-2.25L11.13 3.22a1.5 1.5 0 00-2.56 0Z" />
+      <line x1="10" y1="7.5" x2="10" y2="11.5" />
+      <circle cx="10" cy="14" r="0.5" fill={color} stroke="none" />
+    </svg>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════
 // UTILITIES
@@ -511,11 +675,12 @@ function PasswordScreen({ onLogin }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ALERTS PAGE (NEW — default landing)
+// ALERTS PAGE (default landing — redesigned with summary cards)
 // ═══════════════════════════════════════════════════════════════
 
 function AlertsPage({ products, changes, onProductClick, onNavigate }) {
-  const [oosCollapsed, setOosCollapsed] = useState(true);
+  // Track which sections are expanded (by key)
+  const [expanded, setExpanded] = useState({});
 
   // Section A: Lost Buybox
   const lostBuybox = useMemo(() => {
@@ -543,218 +708,292 @@ function AlertsPage({ products, changes, onProductClick, onNavigate }) {
       .sort((a, b) => b.discountPct - a.discountPct);
   }, [products]);
 
-  // Section D: Out of Stock
+  // Section D: Not Online (in stock but inactive)
+  const notOnline = useMemo(() => {
+    return products.filter(p => p.currentStock > 0 && p.status !== 'active');
+  }, [products]);
+
+  // Section E: Out of Stock
   const outOfStock = useMemo(() => {
     return products.filter(p => p.status === 'out_of_stock' || p.currentStock === 0);
   }, [products]);
 
-  // Section E: Not Online (in stock but inactive)
-  const notOnline = useMemo(() => {
-    return products.filter(p => p.currentStock > 0 && p.status !== 'active');
-  }, [products]);
+  // Auto-expand lost buybox if count > 0 on first render
+  useEffect(() => {
+    if (lostBuybox.length > 0) {
+      setExpanded(prev => ({ ...prev, buybox: true }));
+    }
+  }, []);
+
+  const toggleSection = (key) => {
+    setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const findProduct = (ean, account) =>
     products.find(p => p.ean === ean && p.account === account);
 
   return (
-    <div className="alerts-container">
-      {/* Section A: Lost Buybox */}
-      <div className="alert-section">
-        <div className="alert-section-header red">
-          <span>{lostBuybox.length} product{lostBuybox.length !== 1 ? 's' : ''} where we don't have the buybox</span>
-          <span className="alert-count">{lostBuybox.length}</span>
+    <div>
+      {/* Summary Cards Row */}
+      <div className="alert-summary-row">
+        <div
+          className={'alert-summary-card red' + (expanded.buybox ? ' alert-summary-card-selected' : '')}
+          onClick={() => toggleSection('buybox')}
+        >
+          <div>
+            <div className="alert-summary-icon"><IconShield size={24} color="#fff" /></div>
+            <div className="alert-summary-count">{lostBuybox.length}</div>
+            <div className="alert-summary-label">Lost Buybox</div>
+          </div>
         </div>
-        <div className="alert-section-body">
-          {lostBuybox.length === 0 ? (
-            <div className="alert-empty">All buyboxes won!</div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>EAN</th>
-                  <th>Account</th>
-                  <th>Our Price</th>
-                  <th>Buybox Price</th>
-                  <th>Gap</th>
-                  <th>Buybox Winner</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lostBuybox.map((p, i) => (
-                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
-                    <td style={{maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
-                      {p.productName || '\u2014'}
-                    </td>
-                    <td>{p.ean}</td>
-                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
-                    <td style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</td>
-                    <td style={{fontWeight: 600}}>{formatCurrency(p.buyboxPrice)}</td>
-                    <td className="price-up">+{formatCurrency(p.gap)}</td>
-                    <td style={{fontSize: '12px', color: 'var(--text-secondary)'}}>{p.buyboxWinner || '\u2014'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div
+          className={'alert-summary-card orange' + (expanded.changes ? ' alert-summary-card-selected' : '')}
+          onClick={() => toggleSection('changes')}
+        >
+          <div>
+            <div className="alert-summary-icon"><IconTrendingUp size={24} color="#fff" /></div>
+            <div className="alert-summary-count">{recentChanges.length}</div>
+            <div className="alert-summary-label">Price Changes 7d</div>
+          </div>
+        </div>
+        <div
+          className={'alert-summary-card green' + (expanded.promos ? ' alert-summary-card-selected' : '')}
+          onClick={() => toggleSection('promos')}
+        >
+          <div>
+            <div className="alert-summary-icon"><IconTag size={24} color="#fff" /></div>
+            <div className="alert-summary-count">{activePromos.length}</div>
+            <div className="alert-summary-label">On Promo</div>
+          </div>
+        </div>
+        <div
+          className={'alert-summary-card amber' + (expanded.notOnline ? ' alert-summary-card-selected' : '')}
+          onClick={() => toggleSection('notOnline')}
+        >
+          <div>
+            <div className="alert-summary-icon"><IconEyeOff size={24} color="#fff" /></div>
+            <div className="alert-summary-count">{notOnline.length}</div>
+            <div className="alert-summary-label">Not Online</div>
+          </div>
+        </div>
+        <div
+          className={'alert-summary-card grey' + (expanded.oos ? ' alert-summary-card-selected' : '')}
+          onClick={() => toggleSection('oos')}
+        >
+          <div>
+            <div className="alert-summary-icon"><IconPackage size={24} color="#fff" /></div>
+            <div className="alert-summary-count">{outOfStock.length}</div>
+            <div className="alert-summary-label">Out of Stock</div>
+          </div>
         </div>
       </div>
 
-      {/* Section B: Recent Price Changes */}
-      <div className="alert-section">
-        <div className="alert-section-header orange">
-          <span>{recentChanges.length} price change{recentChanges.length !== 1 ? 's' : ''} in the last 7 days</span>
-          <span className="alert-count">{recentChanges.length}</span>
-        </div>
-        <div className="alert-section-body">
-          {recentChanges.length === 0 ? (
-            <div className="alert-empty">No price changes in the last 7 days</div>
-          ) : (
-            <>
-              <div className="changes-grid" style={{padding: '16px'}}>
-                {recentChanges.slice(0, 10).map((c, i) => (
-                  <div
-                    key={i}
-                    className={'change-card ' + c.direction}
-                    onClick={() => {
-                      const prod = findProduct(c.ean, c.account);
-                      if (prod) onProductClick(prod);
-                    }}
-                  >
-                    <div className="change-card-header">
-                      <div className="change-card-product" title={c.productName}>{c.productName || c.ean}</div>
-                      <div className="change-card-time">{timeAgo(c.timestamp)}</div>
+      {/* Expandable Detail Sections */}
+      <div className="alerts-container">
+        {/* Lost Buybox Detail */}
+        {expanded.buybox && (
+          <div className="alert-detail-section">
+            <div className="alert-detail-header">
+              <span>Lost Buybox</span>
+              <span className="section-count">{lostBuybox.length} product{lostBuybox.length !== 1 ? 's' : ''}</span>
+            </div>
+            {lostBuybox.length === 0 ? (
+              <div className="alert-empty">All buyboxes won!</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>EAN</th>
+                    <th>Account</th>
+                    <th>Our Price</th>
+                    <th>Buybox Price</th>
+                    <th>Gap</th>
+                    <th>Buybox Winner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lostBuybox.map((p, i) => (
+                    <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                      <td style={{maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                        {p.productName || '\u2014'}
+                      </td>
+                      <td>{p.ean}</td>
+                      <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                      <td style={{fontWeight: 600}}>{formatCurrency(p.currentPrice)}</td>
+                      <td style={{fontWeight: 600}}>{formatCurrency(p.buyboxPrice)}</td>
+                      <td className={'price-up' + (p.gap > 1 ? ' gap-cell-red' : '')} style={p.gap > 1 ? {background: 'rgba(220,38,38,0.06)', borderRadius: '4px'} : {}}>
+                        +{formatCurrency(p.gap)}
+                      </td>
+                      <td style={{fontSize: '12px', color: 'var(--text-secondary)'}}>{p.buyboxWinner || '\u2014'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* Recent Price Changes Detail */}
+        {expanded.changes && (
+          <div className="alert-detail-section">
+            <div className="alert-detail-header">
+              <span>Price Changes — Last 7 Days</span>
+              <span className="section-count">{recentChanges.length} change{recentChanges.length !== 1 ? 's' : ''}</span>
+            </div>
+            {recentChanges.length === 0 ? (
+              <div className="alert-empty">No price changes in the last 7 days</div>
+            ) : (
+              <>
+                <div className="changes-grid" style={{padding: '16px'}}>
+                  {recentChanges.slice(0, 10).map((c, i) => (
+                    <div
+                      key={i}
+                      className={'change-card ' + c.direction}
+                      onClick={() => {
+                        const prod = findProduct(c.ean, c.account);
+                        if (prod) onProductClick(prod);
+                      }}
+                    >
+                      <div className="change-card-header">
+                        <div className="change-card-product" title={c.productName}>{c.productName || c.ean}</div>
+                        <div className="change-card-time">{timeAgo(c.timestamp)}</div>
+                      </div>
+                      <div className="change-card-prices">
+                        <span className="change-card-old">{formatCurrency(c.oldPrice)}</span>
+                        <span className="change-card-arrow">{'\u2192'}</span>
+                        <span className={'change-card-new ' + (c.direction === 'increase' ? 'price-up' : 'price-down')}>
+                          {formatCurrency(c.newPrice)}
+                        </span>
+                      </div>
+                      <div className="change-card-meta">
+                        <span className={'badge badge-' + c.account}>{c.account}</span>
+                        <span>{c.changePct}</span>
+                        <span>{formatDateTime(c.timestamp)}</span>
+                      </div>
                     </div>
-                    <div className="change-card-prices">
-                      <span className="change-card-old">{formatCurrency(c.oldPrice)}</span>
-                      <span className="change-card-arrow">{'\u2192'}</span>
-                      <span className={'change-card-new ' + (c.direction === 'increase' ? 'price-up' : 'price-down')}>
-                        {formatCurrency(c.newPrice)}
-                      </span>
-                    </div>
-                    <div className="change-card-meta">
-                      <span className={'badge badge-' + c.account}>{c.account}</span>
-                      <span>{c.changePct}</span>
-                      <span>{formatDateTime(c.timestamp)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {recentChanges.length > 10 && (
-                <button className="alert-view-all" onClick={() => onNavigate('changes')}>
-                  View all {recentChanges.length} changes &rarr;
-                </button>
-              )}
-            </>
-          )}
-        </div>
+                  ))}
+                </div>
+                {recentChanges.length > 10 && (
+                  <button className="alert-view-all" onClick={() => onNavigate('changes')}>
+                    View all {recentChanges.length} changes &rarr;
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Active Promotions Detail */}
+        {expanded.promos && (
+          <div className="alert-detail-section">
+            <div className="alert-detail-header">
+              <span>Active Promotions</span>
+              <span className="section-count">{activePromos.length} product{activePromos.length !== 1 ? 's' : ''}</span>
+            </div>
+            {activePromos.length === 0 ? (
+              <div className="alert-empty">No active promotions</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Account</th>
+                    <th>Base Price</th>
+                    <th>Promo Price</th>
+                    <th>Discount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activePromos.map((p, i) => (
+                    <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                      <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                        {p.productName || '\u2014'}
+                      </td>
+                      <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                      <td style={{textDecoration: 'line-through', color: 'var(--text-secondary)'}}>{formatCurrency(p.basePrice)}</td>
+                      <td style={{fontWeight: 700, color: 'var(--success)'}}>{formatCurrency(p.currentPrice)}</td>
+                      <td style={{fontWeight: 600, color: 'var(--success)'}}>-{p.discountPct.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* Not Online Detail */}
+        {expanded.notOnline && (
+          <div className="alert-detail-section">
+            <div className="alert-detail-header">
+              <span>In Stock but Not Online</span>
+              <span className="section-count">{notOnline.length} product{notOnline.length !== 1 ? 's' : ''}</span>
+            </div>
+            {notOnline.length === 0 ? (
+              <div className="alert-empty">All in-stock products are online</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>EAN</th>
+                    <th>Account</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notOnline.map((p, i) => (
+                    <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                      <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                        {p.productName || '\u2014'}
+                      </td>
+                      <td>{p.ean}</td>
+                      <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                      <td style={{fontWeight: 600}}>{p.currentStock}</td>
+                      <td><span className={'badge badge-' + p.status}>{p.status.replace('_', ' ')}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* Out of Stock Detail */}
+        {expanded.oos && (
+          <div className="alert-detail-section">
+            <div className="alert-detail-header">
+              <span>Out of Stock</span>
+              <span className="section-count">{outOfStock.length} product{outOfStock.length !== 1 ? 's' : ''}</span>
+            </div>
+            {outOfStock.length === 0 ? (
+              <div className="alert-empty">All products in stock</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>EAN</th>
+                    <th>Account</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {outOfStock.map((p, i) => (
+                    <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
+                      <td style={{maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
+                        {p.productName || '\u2014'}
+                      </td>
+                      <td>{p.ean}</td>
+                      <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Section C: Active Promotions */}
-      <div className="alert-section">
-        <div className="alert-section-header green">
-          <span>{activePromos.length} product{activePromos.length !== 1 ? 's' : ''} currently on promotion</span>
-          <span className="alert-count">{activePromos.length}</span>
-        </div>
-        <div className="alert-section-body">
-          {activePromos.length === 0 ? (
-            <div className="alert-empty">No active promotions</div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Account</th>
-                  <th>Base Price</th>
-                  <th>Promo Price</th>
-                  <th>Discount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activePromos.map((p, i) => (
-                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
-                    <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
-                      {p.productName || '\u2014'}
-                    </td>
-                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
-                    <td style={{textDecoration: 'line-through', color: 'var(--text-secondary)'}}>{formatCurrency(p.basePrice)}</td>
-                    <td style={{fontWeight: 700, color: 'var(--success)'}}>{formatCurrency(p.currentPrice)}</td>
-                    <td style={{fontWeight: 600, color: 'var(--success)'}}>-{p.discountPct.toFixed(1)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Section D: Not Online (in stock but inactive) */}
-      {notOnline.length > 0 && (
-        <div className="alert-section">
-          <div className="alert-section-header orange">
-            <span>{notOnline.length} product{notOnline.length !== 1 ? 's' : ''} in stock but not online</span>
-            <span className="alert-count">{notOnline.length}</span>
-          </div>
-          <div className="alert-section-body">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>EAN</th>
-                  <th>Account</th>
-                  <th>Stock</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {notOnline.map((p, i) => (
-                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
-                    <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
-                      {p.productName || '\u2014'}
-                    </td>
-                    <td>{p.ean}</td>
-                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
-                    <td style={{fontWeight: 600}}>{p.currentStock}</td>
-                    <td><span className={'badge badge-' + p.status}>{p.status.replace('_', ' ')}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Section E: Out of Stock */}
-      {outOfStock.length > 0 && (
-        <div className="alert-section">
-          <div className="alert-section-header grey" onClick={() => setOosCollapsed(c => !c)}>
-            <span>{outOfStock.length} product{outOfStock.length !== 1 ? 's' : ''} out of stock</span>
-            <span className="alert-count">{oosCollapsed ? '\u25BC' : '\u25B2'} {outOfStock.length}</span>
-          </div>
-          <div className={'alert-section-body' + (oosCollapsed ? ' collapsed' : '')}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>EAN</th>
-                  <th>Account</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outOfStock.map((p, i) => (
-                  <tr key={p.ean + '-' + p.account + '-' + i} className="clickable-row" onClick={() => onProductClick(p)}>
-                    <td style={{maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis'}} title={p.productName}>
-                      {p.productName || '\u2014'}
-                    </td>
-                    <td>{p.ean}</td>
-                    <td><span className={'badge badge-' + p.account}>{p.account}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1220,7 +1459,7 @@ function ProductDetailModal({ product, changes, onClose }) {
             <div className="modal-stats">
               <div className="modal-stat">
                 <div className="modal-stat-label">Our Price</div>
-                <div className="modal-stat-value" style={product.isPromo === 'yes' ? {color: 'var(--success)'} : {}}>
+                <div className="modal-stat-value hero" style={product.isPromo === 'yes' ? {color: 'var(--success)'} : {}}>
                   {formatCurrency(product.currentPrice)}
                   {product.isPromo === 'yes' && <span className="badge badge-promo" style={{marginLeft: 8, verticalAlign: 'middle'}}>PROMO</span>}
                 </div>
@@ -1228,20 +1467,20 @@ function ProductDetailModal({ product, changes, onClose }) {
               {product.basePrice > 0 && product.basePrice !== product.currentPrice && (
                 <div className="modal-stat">
                   <div className="modal-stat-label">Base Price</div>
-                  <div className="modal-stat-value" style={{textDecoration: product.isPromo === 'yes' ? 'line-through' : 'none', color: 'var(--text-secondary)'}}>
+                  <div className="modal-stat-value hero" style={{textDecoration: product.isPromo === 'yes' ? 'line-through' : 'none', color: 'var(--text-secondary)'}}>
                     {formatCurrency(product.basePrice)}
                   </div>
                 </div>
               )}
               <div className="modal-stat">
                 <div className="modal-stat-label">Buybox Price</div>
-                <div className="modal-stat-value">{product.buyboxPrice > 0 ? formatCurrency(product.buyboxPrice) : '\u2014'}</div>
+                <div className="modal-stat-value hero">{product.buyboxPrice > 0 ? formatCurrency(product.buyboxPrice) : '\u2014'}</div>
               </div>
               <div className="modal-stat">
                 <div className="modal-stat-label">Buybox Status</div>
                 <div className="modal-stat-value">
                   {product.hasBuybox ? (
-                    <span className={'badge ' + (product.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no')} style={{fontSize: '12px', padding: '3px 10px'}}>
+                    <span className={'badge ' + (product.hasBuybox === 'yes' ? 'badge-buybox-yes' : 'badge-buybox-no') + ' buybox-badge-lg'} style={{fontSize: '13px', padding: '4px 14px'}}>
                       {product.hasBuybox === 'yes' ? 'WON' : 'LOST'}
                     </span>
                   ) : '\u2014'}
@@ -1550,27 +1789,27 @@ function App() {
           {/* Stats Bar — only on All Products */}
           {page === 'products' && (
             <div className="stats-bar">
-              <div className="stat-card">
+              <div className="stat-card accent-left">
                 <div className="stat-label">Total Products</div>
                 <div className="stat-value accent">{data.totalProducts}</div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card success-left">
                 <div className="stat-label">Buybox Won</div>
                 <div className="stat-value success">{buyboxWon}</div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card danger-left">
                 <div className="stat-label">Buybox Lost</div>
                 <div className={'stat-value' + (buyboxLost > 0 ? ' danger' : '')}>{buyboxLost}</div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card warning-left">
                 <div className="stat-label">On Promo</div>
                 <div className={'stat-value' + (activePromos > 0 ? ' warning' : '')}>{activePromos}</div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card danger-left">
                 <div className="stat-label">Out of Stock</div>
                 <div className={'stat-value' + (outOfStockCount > 0 ? ' danger' : '')}>{outOfStockCount}</div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card warning-left">
                 <div className="stat-label">Not Online</div>
                 <div className={'stat-value' + (notOnlineCount > 0 ? ' warning' : '')}>{notOnlineCount}</div>
               </div>
